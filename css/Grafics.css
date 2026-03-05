@@ -1,47 +1,97 @@
+/* ============================================================
+   Grafics.css  —  chart panel & slider styles
+   ============================================================ */
 
-.Bar {
-    width: calc(50% - 5px); /* Adjusted width for each bar */
-    opacity: 0.8;
-    height: 100%;
-    background-color: #3388FF;
-    border: 1px solid black; /* Add black outline */
-    position: absolute;
-    bottom: 0;
+/* ── Chart panel interior ────────────────────────────────── */
+#chartPanel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  gap: 0;
 }
 
-.Slider {
-    text-align: center;
-    height: 0vh; 
-    visibility: hidden;
+/* Row labels that sit above each chart section */
+.chart-row-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.6em;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #6e7681;
+  padding: 2px 14px 0;
+  flex-shrink: 0;
 }
 
+/* The two chart rows */
+.chart-overview-wrap {
+  flex: 0 0 auto;
+  width: 100%;
+  overflow: hidden;
+}
+
+.chart-detail-wrap {
+  flex: 1 1 auto;
+  display: flex;
+  width: 100%;
+  overflow: hidden;
+  border-top: 1px solid rgba(255,255,255,0.06);
+}
+
+.chart-zoom-wrap {
+  flex: 0 0 57%;
+  overflow: hidden;
+  border-right: 1px solid rgba(255,255,255,0.06);
+}
+
+.chart-winloss-wrap {
+  flex: 1 1 43%;
+  overflow: hidden;
+}
+
+/* ── D3 SVG shared styles (applied via JS, kept here for ref) */
+.chart-svg text {
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+/* ── Slider ──────────────────────────────────────────────── */
 #slider {
-      width: 98%; /* Set the width of the slider to fill the entire Slider container */
+  -webkit-appearance: none;
+  appearance: none;
+  height: 3px;
+  background: rgba(255,255,255,0.1);
+  border-radius: 2px;
+  outline: none;
 }
 
-.Highlighted {
-    background-color: #FF6A00;
-  }
-
-  .HorizontalLine {
-    border-top: 1px dotted black; /* Set the border-top to create a dotted line */
+#slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #FF6A00;
+  cursor: pointer;
+  box-shadow: 0 0 8px rgba(255,106,0,0.6);
+  border: 2px solid #0a0e14;
+  transition: box-shadow 0.15s;
 }
 
-
-  /*
-  .BarPlot {
-    text-align: center;
-    justify-content: center;
-    height: 0;
-    visibility: hidden;
-    background-color: #E5E5E5; 
-    width: 100%;
+#slider::-webkit-slider-thumb:hover {
+  box-shadow: 0 0 14px rgba(255,106,0,0.9);
 }
 
-.Slider {
-    text-align: center;
-    height: 0; 
-    visibility: hidden;
-    background-color: #E5E5E5; 
+#slider::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #FF6A00;
+  cursor: pointer;
+  border: 2px solid #0a0e14;
+  box-shadow: 0 0 8px rgba(255,106,0,0.6);
 }
-*/
+
+#slider::-webkit-slider-runnable-track {
+  height: 3px;
+  background: linear-gradient(to right, rgba(114,255,0,0.3), rgba(255,106,0,0.3));
+  border-radius: 2px;
+}

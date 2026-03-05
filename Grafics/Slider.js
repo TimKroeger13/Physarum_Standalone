@@ -1,16 +1,13 @@
-  function highlightBar() {
-    const value = parseInt(slider.value);
-    const bars = document.querySelectorAll('.Bar');
+// Slider.js — delegates highlight to the D3 chart system
+// highlightBar() is the only public function called by SliderMove()
 
-    bars.forEach((bar, index) => {
-        if (index + 1 === value) { // Index is zero-based
-            bar.classList.add('Highlighted');
-            bar.style.opacity = '1'; // Set opacity to 1 when highlighted
-            bar.style.boxShadow = '0 0 10px #ff0000'; // Add a red glow effect
-        } else {
-            bar.classList.remove('Highlighted');
-            bar.style.opacity = '0.8'; // Set opacity to default (you can adjust this value)
-            bar.style.boxShadow = 'none'; // Remove glow effect
-        }
-    });
+function highlightBar() {
+    // BarPlot.js owns the chart state; this just calls through.
+    // The function is re-declared there, but keeping the call here
+    // ensures CalGeometry.js (which calls highlightBar()) continues
+    // to work even if BarPlot.js is loaded after Slider.js.
+    const val = parseInt(document.getElementById('slider').value, 10);
+    if (typeof _updateDetailCharts === 'function') {
+        _updateDetailCharts(val);
+    }
 }

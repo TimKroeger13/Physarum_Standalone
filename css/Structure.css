@@ -1,65 +1,377 @@
+/* ============================================================
+   Structure.css  —  dark industrial / GIS-tool theme
+   Fonts: IBM Plex Mono (data), IBM Plex Sans Condensed (UI)
+   Accent: #72FF00 (matches EntireNetwork map colour)
+   ============================================================ */
+
+:root {
+  --bg:         #0a0e14;
+  --surface:    #0d1520;
+  --surface2:   #111927;
+  --border:     rgba(114, 255, 0, 0.18);
+  --border-dim: rgba(255, 255, 255, 0.07);
+  --accent:     #72FF00;
+  --accent-dim: rgba(114, 255, 0, 0.12);
+  --orange:     #FF6A00;
+  --red:        #ff5050;
+  --text:       #c9d1d9;
+  --muted:      #6e7681;
+  --font-mono:  'IBM Plex Mono', 'Courier New', monospace;
+  --font-ui:    'IBM Plex Sans Condensed', 'Arial Narrow', sans-serif;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
 body {
-    padding: 0;
-    margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-ui);
+  overflow: hidden;
 }
 
-* {
-    box-sizing: border-box;
-}
-
-.Titel, .LoadData, .DisplayData, .InLoading, .BarPlot, .Result, .nested-container{
-    display: flex; 
-    padding: 0;
-    margin: 0;
-    box-sizing: border-box;
-}
-
+/* ── Header ─────────────────────────────────────────────── */
 .Titel {
-    font-size: larger;
-    text-align: center;
-    justify-content: center;
-    height: 5vh;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 5vh;
+  padding: 0 16px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
 }
 
+.titel-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.titel-icon {
+  font-size: 1.3em;
+  color: var(--accent);
+  line-height: 1;
+  filter: drop-shadow(0 0 6px var(--accent));
+}
+
+.titel-text {
+  font-family: var(--font-mono);
+  font-size: 0.95em;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: 0.03em;
+}
+
+.titel-sub {
+  font-family: var(--font-ui);
+  font-size: 0.7em;
+  color: var(--muted);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding-left: 8px;
+  border-left: 1px solid var(--border-dim);
+}
+
+.titel-right {
+  display: flex;
+  align-items: center;
+}
+
+.titel-badge {
+  font-family: var(--font-mono);
+  font-size: 0.6em;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  color: var(--orange);
+  border: 1px solid var(--orange);
+  padding: 2px 7px;
+  border-radius: 2px;
+  opacity: 0.7;
+}
+
+/* ── Control bar ─────────────────────────────────────────── */
 .LoadData {
-    text-align: center;
-    justify-content: center;
-    height: 8vh;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 8vh;
+  padding: 0 14px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border-dim);
+  flex-shrink: 0;
 }
 
+/* ── Button system ───────────────────────────────────────── */
+.btn {
+  font-family: var(--font-mono);
+  font-size: 0.72em;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  border: none;
+  border-radius: 3px;
+  padding: 6px 14px;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.btn-group {
+  display: flex;
+  gap: 4px;
+}
+
+.btn-outline {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--border-dim);
+}
+.btn-outline:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-dim);
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: #0a0e14;
+  font-weight: 600;
+}
+.btn-primary:hover {
+  background: #8fff20;
+  box-shadow: 0 0 14px rgba(114,255,0,0.4);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid var(--border-dim);
+}
+.btn-ghost:hover {
+  color: var(--text);
+  border-color: var(--border-dim);
+  background: var(--surface2);
+}
+
+.btn-export {
+  background: transparent;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  font-size: 0.65em;
+  padding: 4px 10px;
+}
+.btn-export:hover {
+  background: var(--accent-dim);
+}
+
+.btn-icon {
+  font-size: 0.85em;
+  opacity: 0.7;
+}
+
+/* ── Cutoff input ────────────────────────────────────────── */
+.cutoff-control {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-left: auto;
+  padding: 4px 10px;
+  border: 1px solid var(--border-dim);
+  border-radius: 3px;
+  background: var(--surface2);
+}
+
+.cutoff-control label {
+  font-family: var(--font-mono);
+  font-size: 0.65em;
+  color: var(--muted);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.cutoff-control input {
+  width: 55px;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--border-dim);
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: 0.78em;
+  text-align: center;
+  outline: none;
+  padding: 1px 2px;
+}
+
+.cutoff-control input:focus {
+  border-bottom-color: var(--accent);
+}
+
+.cutoff-unit {
+  font-family: var(--font-mono);
+  font-size: 0.65em;
+  color: var(--muted);
+}
+
+/* ── Loading state ───────────────────────────────────────── */
 .InLoading {
-    text-align: center;
-    justify-content: center;
-    height: 0vh;
-    visibility: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  height: 0;
+  visibility: hidden;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  overflow: hidden;
 }
 
-.DisplayData {
-    text-align: center;
-    justify-content: center;
-    height: 87vh;
-    background-color: #D8D8D8 ;
+.InLoading h2 {
+  font-family: var(--font-mono);
+  font-size: 0.82em;
+  font-weight: 500;
+  color: var(--accent);
+  letter-spacing: 0.05em;
 }
 
+.loading-pulse {
+  width: 8px;
+  height: 8px;
+  background: var(--accent);
+  border-radius: 50%;
+  animation: pulse 1s ease-in-out infinite;
+  box-shadow: 0 0 8px var(--accent);
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1;   transform: scale(1);   }
+  50%       { opacity: 0.3; transform: scale(0.6); }
+}
+
+/* ── Chart panel ─────────────────────────────────────────── */
 .BarPlot {
-    text-align: center;
-    justify-content: center;
-    width: 100%;
-    height: 0vh;
-    position: relative;
-    visibility: hidden;
-  }
-
-.Results {
-    height: 0vh; /*4vh*/
-    display: flex;
-    align-items: center;
-    visibility: hidden;
+  height: 0;
+  visibility: hidden;
+  width: 100%;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border-dim);
+  position: relative;
+  overflow: hidden;
+  flex-shrink: 0;
 }
 
-.nested-container {
-    text-align: center;
-    justify-content: center;
-    width:8vw;
-    align-items: flex-start; 
+/* ── Slider ──────────────────────────────────────────────── */
+.Slider {
+  height: 0;
+  visibility: hidden;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border-dim);
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
+  flex-shrink: 0;
+}
+
+#slider {
+  width: 100%;
+  accent-color: var(--orange);
+  cursor: pointer;
+}
+
+/* ── Results bar ─────────────────────────────────────────── */
+.Results {
+  height: 0;
+  visibility: hidden;
+  display: flex;
+  align-items: center;
+  gap: 0;
+  background: var(--surface2);
+  border-bottom: 1px solid var(--border-dim);
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.result-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 14px;
+  border-right: 1px solid var(--border-dim);
+  height: 100%;
+}
+
+.result-label {
+  font-family: var(--font-mono);
+  font-size: 0.6em;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.result-value {
+  font-family: var(--font-mono);
+  font-size: 0.78em;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+/* Keep the old IDs working (CalGeometry.js sets innerHTML directly) */
+#UsageProfit, #UsageNum, #TotalLength {
+  font-family: var(--font-mono);
+  font-size: 0.78em;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+/* ── Map ─────────────────────────────────────────────────── */
+.DisplayData {
+  height: 87vh;
+  width: 100%;
+  display: block;
+  background: #d8d8d8;
+}
+
+/* ── Leaflet overrides ───────────────────────────────────── */
+.leaflet-container {
+  font-family: var(--font-ui) !important;
+}
+
+.leaflet-control-attribution {
+  background: rgba(10,14,20,0.75) !important;
+  color: var(--muted) !important;
+  font-size: 10px !important;
+}
+
+.leaflet-control-attribution a {
+  color: var(--muted) !important;
+}
+
+.leaflet-control-zoom a {
+  background: var(--surface) !important;
+  color: var(--text) !important;
+  border-color: var(--border-dim) !important;
+}
+
+.leaflet-control-zoom a:hover {
+  background: var(--surface2) !important;
+  color: var(--accent) !important;
+}
+
+.leaflet-popup-content-wrapper {
+  background: var(--surface) !important;
+  color: var(--text) !important;
+  border: 1px solid var(--border-dim);
+  border-radius: 3px !important;
+  font-family: var(--font-mono) !important;
+  font-size: 0.75em !important;
+}
+
+.leaflet-popup-tip {
+  background: var(--surface) !important;
 }

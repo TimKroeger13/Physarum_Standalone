@@ -5,31 +5,29 @@
   <base target="_top">
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-
   <title>Physarum Netzplaner</title>
-  <meta charset="UTF-8">
 
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@400;500;600&display=swap" rel="stylesheet">
 
-  <!--Extern refeerences-->
+  <!-- External libraries -->
   <script src='https://unpkg.com/@turf/turf@6/turf.min.js'></script>
-
   <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
 
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-     integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
-     crossorigin=""/>
+     integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 
-     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
-     crossorigin=""></script>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
 
-     <script src="https://d3js.org/d3.v7.min.js"></script>
-  
-  <!--StyleSheets-->
+  <!-- StyleSheets -->
   <link rel="stylesheet" href="css/Structure.css">
   <link rel="stylesheet" href="css/Grafics.css">
 
-  <!--Javascript-->
+  <!-- Javascript -->
   <script src="Map/Map.js"></script>
   <script src="StartUp.Js"></script>
   <script src="LoadData/LoadGeoJson.js"></script>
@@ -45,73 +43,107 @@
   <script src="Grafics/Slider.js"></script>
   <script src="LoadData/CsvLoading.js"></script>
   <script src="LoadData/LoadingMessages.js"></script>
-
 </head>
 
 <body>
 
-    <div class = "Titel">
+  <!-- ── Header ──────────────────────────────────────── -->
+  <div class="Titel">
+    <div class="titel-left">
+      <span class="titel-icon">⬡</span>
+      <span class="titel-text">Physarum Netzplaner</span>
+      <span class="titel-sub">weighted network optimizer</span>
+    </div>
+    <div class="titel-right">
+      <span class="titel-badge">PROTOTYP</span>
+    </div>
+  </div>
 
-        <p id = "titelMeassage"> Gewichteter Physarum polycephalum Netzplaner [Prototyp] </p>
+  <!-- ── Controls ────────────────────────────────────── -->
+  <div class="LoadData">
 
+    <input type="file" id="fileInput" style="display:none;" accept=".geojson,.csv,.phy">
+
+    <div class="btn-group">
+      <button onclick="loadSourceData()"  type="button" class="btn btn-outline">
+        <span class="btn-icon">⬤</span> Source
+      </button>
+      <button onclick="loadNetworkData()" type="button" class="btn btn-outline">
+        <span class="btn-icon">─</span> Network
+      </button>
+      <button onclick="loadUserData()"    type="button" class="btn btn-outline">
+        <span class="btn-icon">◆</span> Houses
+      </button>
     </div>
 
-    <div class = "LoadData">
+    <button onclick="calculate()" type="button" class="btn btn-primary">
+      ▶ Calculate
+    </button>
 
-      <input type="file" id="fileInput" style="display: none;" accept=".geojson,.csv,.phy">
-      
-      <button onclick="loadSourceData()" type="button" class="ImportButton">Load source-point/s</button>
-      <button onclick="loadNetworkData()" type="button" class = "ImportButton">Load street-network</button>
-      <button onclick="loadUserData()" type="button" class = "ImportButton">Load house-point/s</button>
+    <button onclick="modeldata()" type="button" class="btn btn-ghost">
+      ⇥ Import Model
+    </button>
 
-      <button onclick="calculate()" type="button" class = "ImportButton">Calculate!</button>
-
-      <button onclick="modeldata()" type="button" class = "ModelButton">Import Model</button>
-
-      <label for="heatCutoffInput">Heat Cutoff (kW):</label>
-<input type="number" id="heatCutoffInput" value="1" min="0" step="0.1" 
-       onchange="heatCutoff = parseFloat(this.value)">
-    
+    <div class="cutoff-control">
+      <label for="heatCutoffInput">Cutoff</label>
+      <input type="number" id="heatCutoffInput" value="1" min="0" step="0.1"
+             onchange="window.heatCutoff = parseFloat(this.value)">
+      <span class="cutoff-unit">kW</span>
     </div>
 
-    <div class = "InLoading">
+  </div>
 
-      <h2 id="calPath"> Calculate Paths: ... </h2>
+  <!-- ── Loading state ───────────────────────────────── -->
+  <div class="InLoading">
+    <div class="loading-pulse"></div>
+    <h2 id="calPath">Calculating paths…</h2>
+  </div>
 
+  <!-- ── Chart panel ─────────────────────────────────── -->
+  <div class="BarPlot" id="chartPanel"></div>
+
+  <!-- ── Slider ──────────────────────────────────────── -->
+  <div class="Slider">
+    <input type="range" id="slider" min="1" max="10" value="1">
+  </div>
+
+  <!-- ── Results bar ─────────────────────────────────── -->
+  <div class="Results">
+    <div class="result-item">
+      <button onclick="handleExportButtonClick()" type="button" class="btn btn-export">
+        ↓ Export
+      </button>
     </div>
-
-    <div class="Results">
-      <div class="nested-container">
-        <button onclick="handleExportButtonClick()" type="button" class="ExportButton">Export Data</button>
-      </div>
-      <div class="nested-container">
-        <h4 id="UsageProfit">Nutzlast pro Meter: ...</h4>
-      </div>
-      <div class="nested-container">
-        <h4 id="UsageNum">Nutzlast: ...</h4>
-      </div>
-      <div class="nested-container">
-        <h4 id="TotalLength">Gesamtlänge: ...</h4>
-      </div>
+    <div class="result-item">
+      <span class="result-label">kWh/m</span>
+      <span class="result-value" id="UsageProfit">—</span>
     </div>
-
-    <div class="BarPlot">
+    <div class="result-item">
+      <span class="result-label">kWh total</span>
+      <span class="result-value" id="UsageNum">—</span>
     </div>
-  
-    <div class="Slider">
-      <input type="range" id="slider" min="1" max="10" value="1">
+    <div class="result-item">
+      <span class="result-label">length</span>
+      <span class="result-value" id="TotalLength">—</span>
     </div>
+  </div>
 
-    <div class = "DisplayData" id="map">
-        <p> Display Data </p>
-    </div>
+  <!-- ── Map ─────────────────────────────────────────── -->
+  <div class="DisplayData" id="map"></div>
 
-<script>
+  <script>
+    // Expose heatCutoff to window so CalEntireEntwork.js can read it
+    window.heatCutoff = 1;
+    document.getElementById('heatCutoffInput').addEventListener('change', function() {
+      window.heatCutoff = parseFloat(this.value);
+    });
 
-  slider.addEventListener('input', SliderMove);
+    document.getElementById('slider').addEventListener('input', SliderMove);
 
-</script>
-
-
+    // Patch result display to use new cleaner format
+    const _origSliderMove = SliderMove;
+    // (SliderMove is defined in CalGeometry.js and will update the elements directly)
+  </script>
 
 </body>
+</html>

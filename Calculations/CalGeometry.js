@@ -173,10 +173,10 @@ async function SliderMove(){
     UsageProfitElement.innerHTML = "Nutzlast pro Meter: " + Math.round(EntireNetwork[SelectedData.length-1].PathTotalProfit) +" kWh/m";
 
     const UsageNumElement = document.getElementById('UsageNum');
-    UsageNumElement.innerHTML = "Nutzlast: " + Math.round(EntireNetwork[SelectedData.length-1].PathValue) + " kWh";
+    UsageNumElement.innerHTML = "Nutzlast: " + Math.round(Math.round(EntireNetwork[SelectedData.length-1].PathValue)/1000/10)/100 + " GWh";
 
     const TotalLengthElement = document.getElementById('TotalLength');
-    TotalLengthElement.innerHTML = "Gesamtlänge: " + Math.round(EntireNetwork[SelectedData.length-1].PathLength) + " Meter";
+    TotalLengthElement.innerHTML = "Gesamtlänge: " + Math.round(Math.round(EntireNetwork[SelectedData.length-1].PathLength)/10)/100 + " Kilometer";
 
 
 }

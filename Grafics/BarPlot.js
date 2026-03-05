@@ -92,39 +92,39 @@ function _scheduleBuild(attempt) {
 // a look-around window (8% of series, min 3).  Greedy-select top-3 by
 // score, enforcing 20% series-length minimum separation between peaks.
 // Index 0 is always a candidate (it's the global best for declining curves).
+// Top-3 *true* local maxima of arr (e.g. _connProfit), with min separation
+// Return indices of top-N highest values in arr (e.g. _connProfit),
+// enforcing a minimum index separation so they don't cluster.
 function _findLocalMaxima(arr) {
-    if (arr.length === 0) return [];
-    const n       = arr.length;
-    const WIN     = Math.max(3, Math.floor(n * 0.08));
-    const MIN_SEP = Math.max(5, Math.floor(n * 0.20));
+    if (!arr || arr.length === 0) return [];
 
-    const score = new Array(n).fill(0);
-    for (let i = 0; i < n; i++) {
-        let localMin = Infinity;
-        for (let j = Math.max(0, i - WIN); j <= Math.min(n - 1, i + WIN); j++) {
-            if (j !== i && arr[j] < localMin) localMin = arr[j];
-        }
-        score[i] = arr[i] - localMin;
-    }
+    const n = arr.length;
+    const MIN_SEP = Math.max(5, Math.floor(n * 0.20));  // same idea as before
 
-    const candidates = [];
-    for (let i = 0; i < n; i++) {
-        if (score[i] > 0) candidates.push({ i, s: score[i] });
-    }
-    if (!candidates.some(c => c.i === 0)) {
-        let localMin = Infinity;
-        for (let j = 1; j <= Math.min(n - 1, WIN); j++) if (arr[j] < localMin) localMin = arr[j];
-        candidates.push({ i: 0, s: arr[0] - localMin });
-    }
-    candidates.sort((a, b) => b.s - a.s);
+    // Build list of (index, value)
+    const entries = arr.map((v, i) => ({ i, v }));
+
+    // Sort by value descending (highest first)
+    entries.sort((a, b) => b.v - a.v);
 
     const selected = [];
-    for (const c of candidates) {
-        if (selected.length >= TOP_N) break;
-        if (!selected.some(s => Math.abs(s.i - c.i) < MIN_SEP)) selected.push(c);
+
+    // Greedy select top-N, respecting MIN_SEP
+    for (const e of entries) {
+        if (!isFinite(e.v)) continue;           // ignore NaN / Infinity
+        if (selected.length >= TOP_N) break;    // we've got gold/silver/bronze
+
+        const tooClose = selected.some(s => Math.abs(s.i - e.i) < MIN_SEP);
+        if (!tooClose) {
+            selected.push(e);
+        }
     }
-    return selected.map(c => c.i).sort((a, b) => a - b);
+
+    // Return the chosen indices sorted ascending (so drawing order is stable)
+    return selected.map(e => e.i).sort((a, b) => a - b);
 }
+
+
 
 // ── Build SVG panels (once per dataset) ─────────────────────
 function _buildCharts() {

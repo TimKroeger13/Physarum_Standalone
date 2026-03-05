@@ -1,7 +1,5 @@
 /* ============================================================
-   Structure.css  —  dark industrial / GIS-tool theme
-   Fonts: IBM Plex Mono (data), IBM Plex Sans Condensed (UI)
-   Accent: #72FF00 (matches EntireNetwork map colour)
+   Structure.css  —  dark industrial / GIS-tool theme  v4
    ============================================================ */
 
 :root {
@@ -39,16 +37,19 @@ body {
   align-items: center;
   justify-content: space-between;
   height: 5vh;
-  padding: 0 16px;
+  min-height: 32px;
+  padding: 0 12px 0 16px;
   background: var(--surface);
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
+  transition: height 0.25s ease;
 }
 
 .titel-left {
   display: flex;
   align-items: center;
   gap: 10px;
+  overflow: hidden;
 }
 
 .titel-icon {
@@ -56,6 +57,7 @@ body {
   color: var(--accent);
   line-height: 1;
   filter: drop-shadow(0 0 6px var(--accent));
+  flex-shrink: 0;
 }
 
 .titel-text {
@@ -64,6 +66,7 @@ body {
   font-weight: 600;
   color: var(--text);
   letter-spacing: 0.03em;
+  white-space: nowrap;
 }
 
 .titel-sub {
@@ -74,11 +77,14 @@ body {
   text-transform: uppercase;
   padding-left: 8px;
   border-left: 1px solid var(--border-dim);
+  white-space: nowrap;
 }
 
 .titel-right {
   display: flex;
   align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
 }
 
 .titel-badge {
@@ -93,16 +99,39 @@ body {
   opacity: 0.7;
 }
 
+/* ── Collapse button ─────────────────────────────────────── */
+.collapse-btn {
+  background: transparent;
+  border: 1px solid var(--border-dim);
+  border-radius: 3px;
+  color: var(--muted);
+  padding: 4px 9px;
+  cursor: pointer;
+  font-size: 0.75em;
+  line-height: 1;
+  transition: color 0.15s, border-color 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.collapse-btn:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
 /* ── Control bar ─────────────────────────────────────────── */
 .LoadData {
   display: flex;
   align-items: center;
   gap: 10px;
   height: 8vh;
+  min-height: 48px;
   padding: 0 14px;
   background: var(--surface);
   border-bottom: 1px solid var(--border-dim);
   flex-shrink: 0;
+  overflow: hidden;
+  transition: height 0.25s ease, visibility 0s;
 }
 
 /* ── Button system ───────────────────────────────────────── */
@@ -122,10 +151,7 @@ body {
   gap: 5px;
 }
 
-.btn-group {
-  display: flex;
-  gap: 4px;
-}
+.btn-group { display: flex; gap: 4px; }
 
 .btn-outline {
   background: transparent;
@@ -155,7 +181,6 @@ body {
 }
 .btn-ghost:hover {
   color: var(--text);
-  border-color: var(--border-dim);
   background: var(--surface2);
 }
 
@@ -166,16 +191,11 @@ body {
   font-size: 0.65em;
   padding: 4px 10px;
 }
-.btn-export:hover {
-  background: var(--accent-dim);
-}
+.btn-export:hover { background: var(--accent-dim); }
 
-.btn-icon {
-  font-size: 0.85em;
-  opacity: 0.7;
-}
+.btn-icon { font-size: 0.85em; opacity: 0.7; }
 
-/* ── Cutoff input ────────────────────────────────────────── */
+/* ── Cutoff control ──────────────────────────────────────── */
 .cutoff-control {
   display: flex;
   align-items: center;
@@ -186,7 +206,6 @@ body {
   border-radius: 3px;
   background: var(--surface2);
 }
-
 .cutoff-control label {
   font-family: var(--font-mono);
   font-size: 0.65em;
@@ -194,7 +213,6 @@ body {
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
-
 .cutoff-control input {
   width: 55px;
   background: transparent;
@@ -207,18 +225,14 @@ body {
   outline: none;
   padding: 1px 2px;
 }
-
-.cutoff-control input:focus {
-  border-bottom-color: var(--accent);
-}
-
+.cutoff-control input:focus { border-bottom-color: var(--accent); }
 .cutoff-unit {
   font-family: var(--font-mono);
   font-size: 0.65em;
   color: var(--muted);
 }
 
-/* ── Loading state ───────────────────────────────────────── */
+/* ── Loading spinner ─────────────────────────────────────── */
 .InLoading {
   display: flex;
   align-items: center;
@@ -230,8 +244,8 @@ body {
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
   overflow: hidden;
+  transition: height 0.2s ease;
 }
-
 .InLoading h2 {
   font-family: var(--font-mono);
   font-size: 0.82em;
@@ -239,7 +253,6 @@ body {
   color: var(--accent);
   letter-spacing: 0.05em;
 }
-
 .loading-pulse {
   width: 8px;
   height: 8px;
@@ -248,7 +261,6 @@ body {
   animation: pulse 1s ease-in-out infinite;
   box-shadow: 0 0 8px var(--accent);
 }
-
 @keyframes pulse {
   0%, 100% { opacity: 1;   transform: scale(1);   }
   50%       { opacity: 0.3; transform: scale(0.6); }
@@ -264,9 +276,10 @@ body {
   position: relative;
   overflow: hidden;
   flex-shrink: 0;
+  transition: height 0.25s ease;
 }
 
-/* ── Slider ──────────────────────────────────────────────── */
+/* ── Slider row ──────────────────────────────────────────── */
 .Slider {
   height: 0;
   visibility: hidden;
@@ -274,15 +287,37 @@ body {
   border-bottom: 1px solid var(--border-dim);
   display: flex;
   align-items: center;
-  padding: 0 14px;
+  gap: 8px;
+  padding: 0 10px;
   flex-shrink: 0;
+  transition: height 0.2s ease;
 }
 
-#slider {
-  width: 100%;
-  accent-color: var(--orange);
+/* ── Prev / Next navigation buttons ─────────────────────── */
+.nav-btn {
+  background: transparent;
+  border: 1px solid var(--border-dim);
+  border-radius: 3px;
+  color: var(--muted);
+  padding: 2px 9px;
   cursor: pointer;
+  font-size: 0.7em;
+  font-family: var(--font-mono);
+  line-height: 1.6;
+  flex-shrink: 0;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
 }
+.nav-btn:hover {
+  color: var(--orange);
+  border-color: var(--orange);
+  background: rgba(255, 106, 0, 0.1);
+}
+.nav-btn:active {
+  background: rgba(255, 106, 0, 0.2);
+}
+
+/* The range input fills the space between the two buttons */
+#slider { flex: 1; }
 
 /* ── Results bar ─────────────────────────────────────────── */
 .Results {
@@ -290,13 +325,12 @@ body {
   visibility: hidden;
   display: flex;
   align-items: center;
-  gap: 0;
   background: var(--surface2);
   border-bottom: 1px solid var(--border-dim);
   flex-shrink: 0;
   overflow: hidden;
+  transition: height 0.2s ease;
 }
-
 .result-item {
   display: flex;
   align-items: center;
@@ -305,7 +339,6 @@ body {
   border-right: 1px solid var(--border-dim);
   height: 100%;
 }
-
 .result-label {
   font-family: var(--font-mono);
   font-size: 0.6em;
@@ -313,7 +346,6 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.08em;
 }
-
 .result-value {
   font-family: var(--font-mono);
   font-size: 0.78em;
@@ -321,7 +353,7 @@ body {
   color: var(--accent);
 }
 
-/* Keep the old IDs working (CalGeometry.js sets innerHTML directly) */
+/* Keep CalGeometry.js's innerHTML assignments working */
 #UsageProfit, #UsageNum, #TotalLength {
   font-family: var(--font-mono);
   font-size: 0.78em;
@@ -335,34 +367,78 @@ body {
   width: 100%;
   display: block;
   background: #d8d8d8;
+  transition: height 0.25s ease;
+}
+
+/* ============================================================
+   COLLAPSED MODE (body.ui-collapsed)
+   Shows only: tiny header strip (collapse button) + slider + map
+   All !important override inline styles set by ShowDataLoading.js
+   ============================================================ */
+
+body.ui-collapsed .LoadData {
+  height: 0 !important;
+  visibility: hidden !important;
+  overflow: hidden !important;
+}
+
+body.ui-collapsed .InLoading {
+  height: 0 !important;
+  visibility: hidden !important;
+}
+
+body.ui-collapsed .BarPlot {
+  height: 0 !important;
+  visibility: hidden !important;
+  overflow: hidden !important;
+}
+
+body.ui-collapsed .Results {
+  height: 0 !important;
+  visibility: hidden !important;
+  overflow: hidden !important;
+}
+
+/* Header: shrink to just show the collapse button */
+body.ui-collapsed .Titel {
+  height: 4vh !important;
+}
+body.ui-collapsed .titel-text,
+body.ui-collapsed .titel-sub,
+body.ui-collapsed .titel-badge {
+  visibility: hidden;
+}
+
+/* Slider: stays visible and slightly taller for easier grabbing */
+body.ui-collapsed .Slider {
+  height: 4vh !important;
+  visibility: visible !important;
+}
+
+/* Map: fills all remaining space */
+body.ui-collapsed .DisplayData {
+  height: 92vh !important;
 }
 
 /* ── Leaflet overrides ───────────────────────────────────── */
 .leaflet-container {
   font-family: var(--font-ui) !important;
 }
-
 .leaflet-control-attribution {
   background: rgba(10,14,20,0.75) !important;
   color: var(--muted) !important;
   font-size: 10px !important;
 }
-
-.leaflet-control-attribution a {
-  color: var(--muted) !important;
-}
-
+.leaflet-control-attribution a { color: var(--muted) !important; }
 .leaflet-control-zoom a {
   background: var(--surface) !important;
   color: var(--text) !important;
   border-color: var(--border-dim) !important;
 }
-
 .leaflet-control-zoom a:hover {
   background: var(--surface2) !important;
   color: var(--accent) !important;
 }
-
 .leaflet-popup-content-wrapper {
   background: var(--surface) !important;
   color: var(--text) !important;
@@ -371,7 +447,4 @@ body {
   font-family: var(--font-mono) !important;
   font-size: 0.75em !important;
 }
-
-.leaflet-popup-tip {
-  background: var(--surface) !important;
-}
+.leaflet-popup-tip { background: var(--surface) !important; }

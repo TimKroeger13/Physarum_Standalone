@@ -7,12 +7,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Physarum Netzplaner</title>
 
-  <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@400;500;600&display=swap" rel="stylesheet">
 
-  <!-- External libraries -->
   <script src='https://unpkg.com/@turf/turf@6/turf.min.js'></script>
   <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
 
@@ -23,11 +21,9 @@
 
   <script src="https://d3js.org/d3.v7.min.js"></script>
 
-  <!-- StyleSheets -->
   <link rel="stylesheet" href="css/Structure.css">
   <link rel="stylesheet" href="css/Grafics.css">
 
-  <!-- Javascript -->
   <script src="Map/Map.js"></script>
   <script src="StartUp.Js"></script>
   <script src="LoadData/LoadGeoJson.js"></script>
@@ -47,7 +43,7 @@
 
 <body>
 
-  <!-- ── Header ──────────────────────────────────────── -->
+  <!-- ── Header ──────────────────────────────────────────── -->
   <div class="Titel">
     <div class="titel-left">
       <span class="titel-icon">⬡</span>
@@ -56,12 +52,15 @@
     </div>
     <div class="titel-right">
       <span class="titel-badge">PROTOTYP</span>
+      <!-- Collapse toggle — always visible even when collapsed -->
+      <button id="collapseToggle" class="collapse-btn" onclick="toggleUICollapse()" title="Collapse panel (show map + slider only)">
+        <span id="collapseIcon">▲</span>
+      </button>
     </div>
   </div>
 
-  <!-- ── Controls ────────────────────────────────────── -->
+  <!-- ── Controls ────────────────────────────────────────── -->
   <div class="LoadData">
-
     <input type="file" id="fileInput" style="display:none;" accept=".geojson,.csv,.phy">
 
     <div class="btn-group">
@@ -90,24 +89,25 @@
              onchange="window.heatCutoff = parseFloat(this.value)">
       <span class="cutoff-unit">kW</span>
     </div>
-
   </div>
 
-  <!-- ── Loading state ───────────────────────────────── -->
+  <!-- ── Loading state ───────────────────────────────────── -->
   <div class="InLoading">
     <div class="loading-pulse"></div>
     <h2 id="calPath">Calculating paths…</h2>
   </div>
 
-  <!-- ── Chart panel ─────────────────────────────────── -->
+  <!-- ── Chart panel ─────────────────────────────────────── -->
   <div class="BarPlot" id="chartPanel"></div>
 
-  <!-- ── Slider ──────────────────────────────────────── -->
+  <!-- ── Slider row (with prev/next buttons) ─────────────── -->
   <div class="Slider">
+    <button class="nav-btn" onclick="prevConnection()" title="Previous connection (←)">◀</button>
     <input type="range" id="slider" min="1" max="10" value="1">
+    <button class="nav-btn" onclick="nextConnection()" title="Next connection (→)">▶</button>
   </div>
 
-  <!-- ── Results bar ─────────────────────────────────── -->
+  <!-- ── Results bar ─────────────────────────────────────── -->
   <div class="Results">
     <div class="result-item">
       <button onclick="handleExportButtonClick()" type="button" class="btn btn-export">
@@ -128,11 +128,10 @@
     </div>
   </div>
 
-  <!-- ── Map ─────────────────────────────────────────── -->
+  <!-- ── Map ─────────────────────────────────────────────── -->
   <div class="DisplayData" id="map"></div>
 
   <script>
-    // Expose heatCutoff to window so CalEntireEntwork.js can read it
     window.heatCutoff = 1;
     document.getElementById('heatCutoffInput').addEventListener('change', function() {
       window.heatCutoff = parseFloat(this.value);
@@ -140,9 +139,16 @@
 
     document.getElementById('slider').addEventListener('input', SliderMove);
 
-    // Patch result display to use new cleaner format
-    const _origSliderMove = SliderMove;
-    // (SliderMove is defined in CalGeometry.js and will update the elements directly)
+    // ── Collapse logic ──────────────────────────────────────
+    let _uiCollapsed = false;
+
+    function toggleUICollapse() {
+      _uiCollapsed = !_uiCollapsed;
+      document.body.classList.toggle('ui-collapsed', _uiCollapsed);
+      document.getElementById('collapseIcon').textContent = _uiCollapsed ? '▼' : '▲';
+      // Force Leaflet map to recalculate its size after layout changes
+      setTimeout(() => { if (window.map) window.map.invalidateSize(); }, 320);
+    }
   </script>
 
 </body>

@@ -1,5 +1,5 @@
 /* ============================================================
-   Grafics.css  —  chart panel & slider styles
+   Grafics.css  —  chart panel interior + slider track
    ============================================================ */
 
 /* ── Chart panel interior ────────────────────────────────── */
@@ -8,21 +8,8 @@
   flex-direction: column;
   height: 100%;
   width: 100%;
-  gap: 0;
 }
 
-/* Row labels that sit above each chart section */
-.chart-row-label {
-  font-family: 'IBM Plex Mono', monospace;
-  font-size: 0.6em;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: #6e7681;
-  padding: 2px 14px 0;
-  flex-shrink: 0;
-}
-
-/* The two chart rows */
 .chart-overview-wrap {
   flex: 0 0 auto;
   width: 100%;
@@ -34,26 +21,21 @@
   display: flex;
   width: 100%;
   overflow: hidden;
-  border-top: 1px solid rgba(255,255,255,0.06);
+  border-top: 1px solid rgba(255,255,255,0.05);
 }
 
 .chart-zoom-wrap {
-  flex: 0 0 57%;
+  flex: 0 0 auto;
   overflow: hidden;
-  border-right: 1px solid rgba(255,255,255,0.06);
+  border-right: 1px solid rgba(255,255,255,0.05);
 }
 
 .chart-winloss-wrap {
-  flex: 1 1 43%;
+  flex: 1 1 auto;
   overflow: hidden;
 }
 
-/* ── D3 SVG shared styles (applied via JS, kept here for ref) */
-.chart-svg text {
-  font-family: 'IBM Plex Mono', monospace;
-}
-
-/* ── Slider ──────────────────────────────────────────────── */
+/* ── Range slider track & thumb ─────────────────────────── */
 #slider {
   -webkit-appearance: none;
   appearance: none;
@@ -61,25 +43,48 @@
   background: rgba(255,255,255,0.1);
   border-radius: 2px;
   outline: none;
+  cursor: pointer;
+}
+
+#slider::-webkit-slider-runnable-track {
+  height: 3px;
+  background: linear-gradient(
+    to right,
+    rgba(114, 255,  0, 0.35),
+    rgba(255, 106,  0, 0.35)
+  );
+  border-radius: 2px;
 }
 
 #slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
   background: #FF6A00;
   cursor: pointer;
-  box-shadow: 0 0 8px rgba(255,106,0,0.6);
   border: 2px solid #0a0e14;
+  box-shadow: 0 0 0 2px rgba(255,106,0,0.35);
   transition: box-shadow 0.15s;
+  margin-top: -6.5px;   /* vertically centre on the 3px track */
 }
-
 #slider::-webkit-slider-thumb:hover {
-  box-shadow: 0 0 14px rgba(255,106,0,0.9);
+  box-shadow: 0 0 0 4px rgba(255,106,0,0.5);
+}
+#slider::-webkit-slider-thumb:active {
+  box-shadow: 0 0 0 5px rgba(255,106,0,0.6);
 }
 
+#slider::-moz-range-track {
+  height: 3px;
+  background: linear-gradient(
+    to right,
+    rgba(114, 255,  0, 0.35),
+    rgba(255, 106,  0, 0.35)
+  );
+  border-radius: 2px;
+}
 #slider::-moz-range-thumb {
   width: 14px;
   height: 14px;
@@ -87,11 +92,5 @@
   background: #FF6A00;
   cursor: pointer;
   border: 2px solid #0a0e14;
-  box-shadow: 0 0 8px rgba(255,106,0,0.6);
-}
-
-#slider::-webkit-slider-runnable-track {
-  height: 3px;
-  background: linear-gradient(to right, rgba(114,255,0,0.3), rgba(255,106,0,0.3));
-  border-radius: 2px;
+  box-shadow: 0 0 0 2px rgba(255,106,0,0.35);
 }

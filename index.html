@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="de">
+
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>Physarum Netzplaner</title>
+  <meta charset="UTF-8">
+
+
+  <!--Extern refeerences-->
+  <script src='https://unpkg.com/@turf/turf@6/turf.min.js'></script>
+
+  <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+     integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+     crossorigin=""/>
+
+     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+     crossorigin=""></script>
+
+     <script src="https://d3js.org/d3.v7.min.js"></script>
+  
+  <!--StyleSheets-->
+  <link rel="stylesheet" href="css/Structure.css">
+  <link rel="stylesheet" href="css/Grafics.css">
+
+  <!--Javascript-->
+  <script src="Map/Map.js"></script>
+  <script src="StartUp.Js"></script>
+  <script src="LoadData/LoadGeoJson.js"></script>
+  <script src="Calculations/CalGeometry.js"></script>
+  <script src="Map/AddRemoveFromMap.js"></script>
+  <script src="Calculations/ConnectPoints.js"></script>
+  <script src="Calculations/NewLineNetwork.js"></script>
+  <script src="Calculations/NearestPoints.js"></script>
+  <script src="Calculations/CalCompleteNetwork.js"></script>
+  <script src="Calculations/CalEntireEntwork.js"></script>
+  <script src="LoadData/ShowDataLoading.js"></script>
+  <script src="Grafics/BarPlot.js"></script>
+  <script src="Grafics/Slider.js"></script>
+  <script src="LoadData/CsvLoading.js"></script>
+  <script src="LoadData/LoadingMessages.js"></script>
+
+</head>
+
+<body>
+
+    <div class = "Titel">
+
+        <p id = "titelMeassage"> Gewichteter Physarum polycephalum Netzplaner [Prototyp] </p>
+
+    </div>
+
+    <div class = "LoadData">
+
+      <input type="file" id="fileInput" style="display: none;" accept=".geojson,.csv,.phy">
+      
+      <button onclick="loadSourceData()" type="button" class="ImportButton">Load source-point/s</button>
+      <button onclick="loadNetworkData()" type="button" class = "ImportButton">Load street-network</button>
+      <button onclick="loadUserData()" type="button" class = "ImportButton">Load house-point/s</button>
+
+      <button onclick="calculate()" type="button" class = "ImportButton">Calculate!</button>
+
+      <button onclick="modeldata()" type="button" class = "ModelButton">Import Model</button>
+
+      <label for="heatCutoffInput">Heat Cutoff (kW):</label>
+<input type="number" id="heatCutoffInput" value="1" min="0" step="0.1" 
+       onchange="heatCutoff = parseFloat(this.value)">
+    
+    </div>
+
+    <div class = "InLoading">
+
+      <h2 id="calPath"> Calculate Paths: ... </h2>
+
+    </div>
+
+    <div class="Results">
+      <div class="nested-container">
+        <button onclick="handleExportButtonClick()" type="button" class="ExportButton">Export Data</button>
+      </div>
+      <div class="nested-container">
+        <h4 id="UsageProfit">Nutzlast pro Meter: ...</h4>
+      </div>
+      <div class="nested-container">
+        <h4 id="UsageNum">Nutzlast: ...</h4>
+      </div>
+      <div class="nested-container">
+        <h4 id="TotalLength">Gesamtlänge: ...</h4>
+      </div>
+    </div>
+
+    <div class="BarPlot">
+    </div>
+  
+    <div class="Slider">
+      <input type="range" id="slider" min="1" max="10" value="1">
+    </div>
+
+    <div class = "DisplayData" id="map">
+        <p> Display Data </p>
+    </div>
+
+<script>
+
+  slider.addEventListener('input', SliderMove);
+
+</script>
+
+
+
+</body>

@@ -1,0 +1,47 @@
+
+.Bar {
+    width: calc(50% - 5px); /* Adjusted width for each bar */
+    opacity: 0.8;
+    height: 100%;
+    background-color: #3388FF;
+    border: 1px solid black; /* Add black outline */
+    position: absolute;
+    bottom: 0;
+}
+
+.Slider {
+    text-align: center;
+    height: 0vh; 
+    visibility: hidden;
+}
+
+#slider {
+      width: 98%; /* Set the width of the slider to fill the entire Slider container */
+}
+
+.Highlighted {
+    background-color: #FF6A00;
+  }
+
+  .HorizontalLine {
+    border-top: 1px dotted black; /* Set the border-top to create a dotted line */
+}
+
+
+  /*
+  .BarPlot {
+    text-align: center;
+    justify-content: center;
+    height: 0;
+    visibility: hidden;
+    background-color: #E5E5E5; 
+    width: 100%;
+}
+
+.Slider {
+    text-align: center;
+    height: 0; 
+    visibility: hidden;
+    background-color: #E5E5E5; 
+}
+*/

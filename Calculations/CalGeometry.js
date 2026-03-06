@@ -3,6 +3,7 @@ var NetworkGeometry;
 var UserGeometry;
 
 var ConnectionPoints;
+var ConnectionLines;
 var EntireNetwork;
 var EntireUsage;
 
@@ -50,6 +51,7 @@ async function modeldata(){
     TotalEndUsageDisplay = modelJson[0].TotalEndUsageDisplay;
     UserGeometry = modelJson[0].UserGeometry;
     EntireUsage = modelJson[0].EntireUsage;
+    ConnectionLines = modelJson[0].ConnectionLines || null;
 
     var PathProfit = []
 
@@ -74,6 +76,21 @@ async function modeldata(){
     await AddGeoJsonFeatureToMap_Network(NetworkGeometry);
     await AddGeoJsonFeatureToMap_User(UserGeometry);
 
+    // Reconstruct connection lines from geometry if not in model (old .phy files)
+    if (!ConnectionLines && UserGeometry && NetworkGeometry) {
+        const pointFeatures = await getNearestPointsOfFeatureCollectionAndLine(SourceGeometry, NetworkGeometry, UserGeometry);
+        const newPointFeatures = turf.featureCollection(pointFeatures);
+        ConnectionLines = connectPoints(UserGeometry, newPointFeatures);
+    }
+
+    // Show house connection lines as blue streets — slider stays at 0
+    if (ConnectionLines) {
+        await AddGeoJsonFeatureToMap_UserOneLine(ConnectionLines);
+    }
+
+    // Slider starts at 1 (nothing built yet) — user builds network by dragging
+    document.getElementById('slider').value = 1;
+
 }
 
 
@@ -92,11 +109,11 @@ async function calculate(){
 
     ConnectionPoints = newPointFeatures;
 
-    var lines = connectPoints(UserGeometry, newPointFeatures);
+    ConnectionLines = connectPoints(UserGeometry, newPointFeatures);
 
-    await AddGeoJsonFeatureToMap_UserOneLine(lines);
+    await AddGeoJsonFeatureToMap_UserOneLine(ConnectionLines);
 
-    var FragmentedNetwork = await getFragmentedLineNetwork(NetworkGeometry, lines);
+    var FragmentedNetwork = await getFragmentedLineNetwork(NetworkGeometry, ConnectionLines);
 
     var CompleteNetwork = await getCompleteNetwork(FragmentedNetwork, ConnectionPoints);
 
@@ -250,7 +267,8 @@ async function Export() {
         EntireUsageOccurence: EntireUsageOccurence,
         EntireNetwork: EntireNetwork,
         EntireUsageId: EntireUsageId,
-        EntireUsage: EntireUsage
+        EntireUsage: EntireUsage,
+        ConnectionLines: ConnectionLines
     })
 
 

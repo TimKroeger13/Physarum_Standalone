@@ -44,7 +44,7 @@ async function AddGeoJsonFeatureToMap_User(geoJson){
 async function AddGeoJsonFeatureToMap_UserOneLine(geoJson){
 
     await RemoveLayer(UserOnLineList)
-    await AddGeoJsonToMap(UserOnLineList, geoJson, "#404040", true)
+    await AddGeoJsonToMap(UserOnLineList, geoJson, "#3388FF", true)
 }
 
 async function AddGeoJsonFeatureToMap_CompleteNetwork(geoJson){

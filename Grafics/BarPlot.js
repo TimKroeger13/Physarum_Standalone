@@ -73,7 +73,7 @@ async function displayBarPlot(numbers) {
     _globalWLMax = maxDev * 1.15;
 
     // Find top-3 LOCAL MAXIMA with minimum separation
-    _top3ConnIdx = _findLocalMaxima(_connMarginal);
+    _top3ConnIdx = _findBestConnections(_connMarginal);
 
     _scheduleBuild(0);
 }
@@ -87,67 +87,67 @@ function _scheduleBuild(attempt) {
     }, attempt === 0 ? 300 : 100);
 }
 
-// ── Rebuild chart when container is resized ──────────────────
-// Debounced so rapid dragging doesn't fire hundreds of rebuilds.
-let _resizeTimer = null;
-(function _attachResizeObserver() {
-    const container = document.getElementById('chartPanel');
-    if (!container || typeof ResizeObserver === 'undefined') return;
-    let lastW = 0;
-    new ResizeObserver(entries => {
-        const w = entries[0].contentRect.width;
-        if (Math.abs(w - lastW) < 2) return;   // ignore sub-pixel noise
-        lastW = w;
-        clearTimeout(_resizeTimer);
-        _resizeTimer = setTimeout(() => {
-            if (_built) _buildCharts();         // only if data is already loaded
-        }, 120);
-    }).observe(container);
-})();
-
-// ── Prominence-based peak detection ──────────────────────────
-// Score each point by how much it rises above the local minimum within
-// a look-around window (8% of series, min 3).  Greedy-select top-3 by
-// score, enforcing 20% series-length minimum separation between peaks.
-// Index 0 is always a candidate (it's the global best for declining curves).
-// Top-3 *true* local maxima of arr (e.g. _connProfit), with min separation
-// Return indices of top-N highest values in arr (e.g. _connProfit),
-// enforcing a minimum index separation so they don't cluster.
-function _findLocalMaxima(arr) {
+// ── Best connection picker ────────────────────────────────────
+// Gold  = global maximum (highest marginal kWh/m ever — always included)
+// Silver/Bronze = biggest upward jumps (arr[i] - arr[i-1] > 0), the
+//   "surprise" high-demand cluster connections, sorted by jump magnitude.
+//   The global max is already locked in as gold, so it can't crowd out
+//   the jumps even when index 0 is the highest point.
+function _findBestConnections(arr) {
     if (!arr || arr.length === 0) return [];
+    const n       = arr.length;
+    const MIN_SEP = Math.max(3, Math.floor(n * 0.10));
 
-    const n = arr.length;
-    const MIN_SEP = Math.max(5, Math.floor(n * 0.20));  // same idea as before
+    // Gold: index of the global maximum
+    let goldIdx = 0;
+    for (let i = 1; i < n; i++) {
+        if (isFinite(arr[i]) && arr[i] > arr[goldIdx]) goldIdx = i;
+    }
 
-    // Build list of (index, value)
-    const entries = arr.map((v, i) => ({ i, v }));
+    // Silver/Bronze: biggest positive deltas, respecting MIN_SEP from each other
+    // and from the gold position
+    const jumps = [];
+    for (let i = 1; i < n; i++) {
+        const delta = arr[i] - arr[i - 1];
+        if (delta > 0 && isFinite(delta)) jumps.push({ i, delta });
+    }
+    jumps.sort((a, b) => b.delta - a.delta);
 
-    // Sort by value descending (highest first)
-    entries.sort((a, b) => b.v - a.v);
-
-    const selected = [];
-
-    // Greedy select top-N, respecting MIN_SEP
-    for (const e of entries) {
-        if (!isFinite(e.v)) continue;           // ignore NaN / Infinity
-        if (selected.length >= TOP_N) break;    // we've got gold/silver/bronze
-
-        const tooClose = selected.some(s => Math.abs(s.i - e.i) < MIN_SEP);
-        if (!tooClose) {
-            selected.push(e);
+    const selected = [{ i: goldIdx }];
+    for (const j of jumps) {
+        if (selected.length >= TOP_N) break;
+        if (!selected.some(s => Math.abs(s.i - j.i) < MIN_SEP)) {
+            selected.push({ i: j.i });
         }
     }
 
-    // Return the chosen indices sorted ascending (so drawing order is stable)
-    return selected.map(e => e.i).sort((a, b) => a - b);
+    return selected.map(s => s.i).sort((a, b) => a - b);
 }
+
+// keep old name as alias so nothing else breaks
+function _findLocalMaxima(arr) { return _findBestConnections(arr); }
 
 
 
 // ── Build SVG panels (once per dataset) ─────────────────────
+let _resizeObserverAttached = false;
 function _buildCharts() {
     const container = document.getElementById('chartPanel');
     if (!container || !_connProfit.length) return;
+
+    // Attach ResizeObserver once — here the DOM is guaranteed to exist
+    if (!_resizeObserverAttached && typeof ResizeObserver !== 'undefined') {
+        _resizeObserverAttached = true;
+        let _resizeTimer = null;
+        let _lastW = 0;
+        new ResizeObserver(entries => {
+            const w = Math.round(entries[0].contentRect.width);
+            if (Math.abs(w - _lastW) < 2) return;
+            _lastW = w;
+            clearTimeout(_resizeTimer);
+            _resizeTimer = setTimeout(() => { if (_built) _buildCharts(); }, 120);
+        }).observe(container);
+    }
     container.innerHTML = '';
     _built = false;
 

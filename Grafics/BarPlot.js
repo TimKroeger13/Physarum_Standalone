@@ -73,7 +73,7 @@ async function displayBarPlot(numbers) {
     _globalWLMax = maxDev * 1.15;
 
     // Find top-3 LOCAL MAXIMA with minimum separation
-    _top3ConnIdx = _findLocalMaxima(_connProfit);
+    _top3ConnIdx = _findLocalMaxima(_connMarginal);
 
     _scheduleBuild(0);
 }
@@ -87,40 +87,59 @@ function _scheduleBuild(attempt) {
     }, attempt === 0 ? 300 : 100);
 }
 
-// ── Peak detection: #1 = global max, #2/#3 = biggest upward jumps ───
-// On a Physarum profit curve the series mostly declines.  The only
-// meaningful "notable points" after the global max are the places where
-// the value jumps UP — connecting a far-away high-demand cluster.
-// We find those by positive deltas (arr[i] - arr[i-1] > 0), sorted by
-// magnitude, greedily picked with MIN_SEP spacing between chosen peaks.
+// ── Rebuild chart when container is resized ──────────────────
+// Debounced so rapid dragging doesn't fire hundreds of rebuilds.
+let _resizeTimer = null;
+(function _attachResizeObserver() {
+    const container = document.getElementById('chartPanel');
+    if (!container || typeof ResizeObserver === 'undefined') return;
+    let lastW = 0;
+    new ResizeObserver(entries => {
+        const w = entries[0].contentRect.width;
+        if (Math.abs(w - lastW) < 2) return;   // ignore sub-pixel noise
+        lastW = w;
+        clearTimeout(_resizeTimer);
+        _resizeTimer = setTimeout(() => {
+            if (_built) _buildCharts();         // only if data is already loaded
+        }, 120);
+    }).observe(container);
+})();
+
+// ── Prominence-based peak detection ──────────────────────────
+// Score each point by how much it rises above the local minimum within
+// a look-around window (8% of series, min 3).  Greedy-select top-3 by
+// score, enforcing 20% series-length minimum separation between peaks.
+// Index 0 is always a candidate (it's the global best for declining curves).
+// Top-3 *true* local maxima of arr (e.g. _connProfit), with min separation
+// Return indices of top-N highest values in arr (e.g. _connProfit),
+// enforcing a minimum index separation so they don't cluster.
 function _findLocalMaxima(arr) {
     if (!arr || arr.length === 0) return [];
-    const n       = arr.length;
-    const MIN_SEP = Math.max(5, Math.floor(n * 0.10));
 
-    // #1 — global maximum
-    let maxVal = -Infinity, maxIdx = 0;
-    for (let i = 0; i < n; i++) {
-        if (isFinite(arr[i]) && arr[i] > maxVal) { maxVal = arr[i]; maxIdx = i; }
-    }
+    const n = arr.length;
+    const MIN_SEP = Math.max(5, Math.floor(n * 0.20));  // same idea as before
 
-    // #2, #3 — largest upward jumps (the "surprise" high-demand connections)
-    const jumps = [];
-    for (let i = 1; i < n; i++) {
-        const delta = arr[i] - arr[i - 1];
-        if (delta > 0) jumps.push({ i, delta });
-    }
-    jumps.sort((a, b) => b.delta - a.delta);
+    // Build list of (index, value)
+    const entries = arr.map((v, i) => ({ i, v }));
 
-    const selected = [{ i: maxIdx }];
-    for (const j of jumps) {
-        if (selected.length >= TOP_N) break;
-        if (!selected.some(s => Math.abs(s.i - j.i) < MIN_SEP)) {
-            selected.push({ i: j.i });
+    // Sort by value descending (highest first)
+    entries.sort((a, b) => b.v - a.v);
+
+    const selected = [];
+
+    // Greedy select top-N, respecting MIN_SEP
+    for (const e of entries) {
+        if (!isFinite(e.v)) continue;           // ignore NaN / Infinity
+        if (selected.length >= TOP_N) break;    // we've got gold/silver/bronze
+
+        const tooClose = selected.some(s => Math.abs(s.i - e.i) < MIN_SEP);
+        if (!tooClose) {
+            selected.push(e);
         }
     }
 
-    return selected.map(s => s.i).sort((a, b) => a - b);
+    // Return the chosen indices sorted ascending (so drawing order is stable)
+    return selected.map(e => e.i).sort((a, b) => a - b);
 }
 
 

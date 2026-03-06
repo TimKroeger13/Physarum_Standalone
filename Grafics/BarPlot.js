@@ -73,7 +73,7 @@ async function displayBarPlot(numbers) {
     _globalWLMax = maxDev * 1.15;
 
     // Find top-3 LOCAL MAXIMA with minimum separation
-    _top3ConnIdx = _findBestConnections(_connMarginal);
+    _top3ConnIdx = _findLocalMaxima(_connProfit, _connMarginal);
 
     _scheduleBuild(0);
 }
@@ -87,45 +87,43 @@ function _scheduleBuild(attempt) {
     }, attempt === 0 ? 300 : 100);
 }
 
-// ── Best connection picker ────────────────────────────────────
-// Gold  = global maximum (highest marginal kWh/m ever — always included)
-// Silver/Bronze = biggest upward jumps (arr[i] - arr[i-1] > 0), the
-//   "surprise" high-demand cluster connections, sorted by jump magnitude.
-//   The global max is already locked in as gold, so it can't crowd out
-//   the jumps even when index 0 is the highest point.
-function _findBestConnections(arr) {
-    if (!arr || arr.length === 0) return [];
-    const n       = arr.length;
-    const MIN_SEP = Math.max(3, Math.floor(n * 0.10));
+function _findLocalMaxima(profit, marginal) {
+    if (!profit || profit.length === 0) return [];
+    const n       = profit.length;
+    const MIN_SEP = Math.max(3, Math.floor(n * 0.05));
+    const LOOKBACK = Math.max(5, Math.floor(n * 0.10));
 
-    // Gold: index of the global maximum
+    // Gold: global max of cumulative profit (unchanged)
     let goldIdx = 0;
     for (let i = 1; i < n; i++) {
-        if (isFinite(arr[i]) && arr[i] > arr[goldIdx]) goldIdx = i;
+        if (isFinite(profit[i]) && profit[i] > profit[goldIdx]) goldIdx = i;
     }
-
-    // Silver/Bronze: biggest positive deltas, respecting MIN_SEP from each other
-    // and from the gold position
-    const jumps = [];
-    for (let i = 1; i < n; i++) {
-        const delta = arr[i] - arr[i - 1];
-        if (delta > 0 && isFinite(delta)) jumps.push({ i, delta });
-    }
-    jumps.sort((a, b) => b.delta - a.delta);
-
     const selected = [{ i: goldIdx }];
-    for (const j of jumps) {
+
+    // Silver + Bronze: strict local peaks scored by surge height
+    // A point is a peak if profit[i] > profit[i+1] — no window, no mean, no drift
+    const candidates = [];
+    for (let i = 0; i < n - 1; i++) {
+        if (!isFinite(profit[i])) continue;
+        if (profit[i] <= profit[i + 1]) continue;  // not a peak top — skip
+
+        const lo     = Math.max(0, i - LOOKBACK);
+        const trough = d3.min(profit.slice(lo, i)); // trough BEFORE i
+        const score  = profit[i] - (trough ?? profit[i]);
+        if (score > 0) candidates.push({ i, score });
+    }
+
+    candidates.sort((a, b) => b.score - a.score);
+
+    for (const c of candidates) {
         if (selected.length >= TOP_N) break;
-        if (!selected.some(s => Math.abs(s.i - j.i) < MIN_SEP)) {
-            selected.push({ i: j.i });
+        if (!selected.some(s => Math.abs(s.i - c.i) < MIN_SEP)) {
+            selected.push({ i: c.i });
         }
     }
 
     return selected.map(s => s.i).sort((a, b) => a - b);
 }
-
-// keep old name as alias so nothing else breaks
-function _findLocalMaxima(arr) { return _findBestConnections(arr); }
 
 
 
@@ -134,18 +132,15 @@ let _resizeObserverAttached = false;
 function _buildCharts() {
     const container = document.getElementById('chartPanel');
     if (!container || !_connProfit.length) return;
-
-    // Attach ResizeObserver once — here the DOM is guaranteed to exist
     if (!_resizeObserverAttached && typeof ResizeObserver !== 'undefined') {
         _resizeObserverAttached = true;
-        let _resizeTimer = null;
-        let _lastW = 0;
+        let _rt = null, _lw = 0;
         new ResizeObserver(entries => {
             const w = Math.round(entries[0].contentRect.width);
-            if (Math.abs(w - _lastW) < 2) return;
-            _lastW = w;
-            clearTimeout(_resizeTimer);
-            _resizeTimer = setTimeout(() => { if (_built) _buildCharts(); }, 120);
+            if (Math.abs(w - _lw) < 2) return;
+            _lw = w;
+            clearTimeout(_rt);
+            _rt = setTimeout(() => { if (_built) _buildCharts(); }, 150);
         }).observe(container);
     }
     container.innerHTML = '';

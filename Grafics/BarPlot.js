@@ -87,42 +87,38 @@ function _scheduleBuild(attempt) {
     }, attempt === 0 ? 300 : 100);
 }
 
-function _findLocalMaxima(profit, marginal) {
-    if (!profit || profit.length === 0) return [];
-    const n       = profit.length;
-    const MIN_SEP = Math.max(3, Math.floor(n * 0.05));
-    const LOOKBACK = Math.max(5, Math.floor(n * 0.10));
+// ── _findLocalMaxima ─────────────────────────────────────────
+//  Score = profit[i] − profit[i-1]  (simple step up from previous)
+//  GOLD   = highest cumulative value
+//  SILVER = biggest single-step increase
+//  BRONZE = second-biggest single-step increase
+function _findLocalMaxima(profit) {
+    if (!profit || profit.length < 2) return [];
+    const n = profit.length;
 
-    // Gold: global max of cumulative profit (unchanged)
+    // GOLD: index of highest cumulative value
     let goldIdx = 0;
     for (let i = 1; i < n; i++) {
         if (isFinite(profit[i]) && profit[i] > profit[goldIdx]) goldIdx = i;
     }
-    const selected = [{ i: goldIdx }];
 
-    // Silver + Bronze: strict local peaks scored by surge height
-    // A point is a peak if profit[i] > profit[i+1] — no window, no mean, no drift
-    const candidates = [];
-    for (let i = 0; i < n - 1; i++) {
-        if (!isFinite(profit[i])) continue;
-        if (profit[i] <= profit[i + 1]) continue;  // not a peak top — skip
-
-        const lo     = Math.max(0, i - LOOKBACK);
-        const trough = d3.min(profit.slice(lo, i)); // trough BEFORE i
-        const score  = profit[i] - (trough ?? profit[i]);
-        if (score > 0) candidates.push({ i, score });
+    // SILVER + BRONZE: rank every step by profit[i] - profit[i-1]
+    const steps = [];
+    for (let i = 1; i < n; i++) {
+        if (!isFinite(profit[i]) || !isFinite(profit[i - 1])) continue;
+        steps.push({ i, score: profit[i] - profit[i - 1] });
     }
+    steps.sort((a, b) => b.score - a.score);
 
-    candidates.sort((a, b) => b.score - a.score);
-
-    for (const c of candidates) {
+    // Pick top-2 step indices that are not the same position as gold
+    const selected = [goldIdx];
+    for (const s of steps) {
         if (selected.length >= TOP_N) break;
-        if (!selected.some(s => Math.abs(s.i - c.i) < MIN_SEP)) {
-            selected.push({ i: c.i });
-        }
+        if (!selected.includes(s.i)) selected.push(s.i);
     }
 
-    return selected.map(s => s.i).sort((a, b) => a - b);
+    // Return in medal order: [gold, silver, bronze]
+    return selected;
 }
 
 
@@ -224,12 +220,12 @@ function _buildCharts() {
         .attr('fill', '#72FF00')
         .attr('opacity', 0.55);
 
-    // Top-3 LOCAL MAXIMA markers (gold / silver / bronze)
-    const peakColors = ['#FFD700', '#C0C0C0', '#CD7F32'];
+    // Top-3 markers (gold = highest value / silver = greatest incline / bronze = 2nd incline)
+    const peakColors  = ['#FFD700', '#C0C0C0', '#CD7F32'];
+    const peakLabels  = ['#1 /',    '#2 /',    '#3 /'   ];
     _top3ConnIdx.forEach((cIdx, rank) => {
         const px = xO(_connIndices[cIdx]);
         const py = yO(_connProfit[cIdx]);
-        // Triangle pointing down toward the peak
         oClip.append('path')
             .attr('d', `M${px},${py - 2} L${px - 5},${py - 12} L${px + 5},${py - 12} Z`)
             .attr('fill', peakColors[rank]).attr('opacity', 0.95);
@@ -239,7 +235,7 @@ function _buildCharts() {
             .attr('font-size', '8.5px').attr('font-weight', '600')
             .attr('fill', peakColors[rank])
             .attr('font-family', "'IBM Plex Mono', monospace")
-            .text(`#${rank + 1} ${_fmt(_connProfit[cIdx])}`);
+            .text(`${peakLabels[rank]} ${_fmt(_connProfit[cIdx])}`);
     });
 
     // Slider cursor (updated dynamically)
@@ -344,6 +340,7 @@ function _updateDetailCharts(sliderVal) {
 
     // Top-3 visible in zoom window
     const peakColors = ['#FFD700', '#C0C0C0', '#CD7F32'];
+    const peakLabels = ['#1',    '#2',    '#3'   ];
     _top3ConnIdx.forEach((cIdx, rank) => {
         if (cIdx >= wStart && cIdx < wEnd) {
             const px = xZ(cIdx), py = yZ(_connProfit[cIdx]);
@@ -356,7 +353,7 @@ function _updateDetailCharts(sliderVal) {
                 .attr('text-anchor', 'middle').attr('font-size', '8px')
                 .attr('fill', peakColors[rank])
                 .attr('font-family', "'IBM Plex Mono', monospace")
-                .text(`#${rank + 1}`);
+                .text(peakLabels[rank]);
         }
     });
 

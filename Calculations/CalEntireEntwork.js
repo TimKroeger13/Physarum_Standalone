@@ -1,35 +1,28 @@
 // ============================================================
-//  CalEntireEntwork.js  –  v4  (algorithm-safe memory fixes)
+//  CalEntireEntwork.js  –  v5  (distance skip-guard)
 //
-//  The Phase 1 per-user Dijkstra loop is 100% identical to the
-//  original.  Only the three things that actually leaked memory
-//  are changed:
+//  All fixes from v4 are kept unchanged:
+//    FIX 1 – pre-allocated typed-array buffers
+//    FIX 2 – reusable MinHeap via clear()
+//    FIX 3 – throttled map renderer
 //
-//  FIX 1 – PRE-ALLOCATED TYPED-ARRAY BUFFERS
-//    distU and segWeight were allocated fresh (new Float64Array)
-//    on every outer iteration AND on every user inside that loop.
-//    They are now allocated once before the outer loop and reset
-//    with .fill() (a single fast memset, zero GC pressure).
+//  NEW – FIX 4: FRONTIER DISTANCE SKIP-GUARD
+//    Before running a full Dijkstra for a user, we check the
+//    straight-line distance from that user to every currently
+//    reachable frontier node.  If the closest frontier node
+//    is already farther than  value / heatCutoff  (= the
+//    maximum distance at which this user could ever contribute
+//    weight >= heatCutoff), the Dijkstra is skipped entirely.
 //
-//  FIX 2 – REUSABLE HEAP  (MinHeap.clear())
-//    The heap was constructed fresh (new MinHeap) for every user
-//    Dijkstra run.  The new MinHeap class keeps its internal
-//    arrays alive between uses; clear() just resets the logical
-//    size to 0.  No objects are created or freed per user run.
+//    Straight-line distance is always a lower bound on network
+//    distance, so skipping is always safe — a house that is
+//    geometrically too far away cannot possibly influence any
+//    segment above the cutoff threshold.
 //
-//  FIX 3 – THROTTLED MAP RENDERER
-//    AddGeoJsonFeatureToMap_EntireNetwork was called on every
-//    single outer iteration (up to 1000+ times).  Leaflet creates
-//    DOM/canvas objects on every call.  Without explicit layer
-//    cleanup these accumulate and fill the heap.
-//    Now called every MAP_UPDATE_INTERVAL iterations (default 25)
-//    and always on the final iteration.
-//    The featureCollection wrapper is created once and reused so
-//    the renderer always receives the same object reference,
-//    making it easier for it to diff / replace rather than append.
-//
-//  Everything else (graph build, frontier logic, Phase 2 greedy
-//  walk, Phase 3 finalisation, output format) is unchanged.
+//    The check uses a fast inline haversine (no turf, no object
+//    allocation).  frontierCoords[] is maintained in parallel
+//    with frontierDist[] and grows as extendFrontier() adds
+//    newly reachable nodes.
 // ============================================================
 
 // How often to push an update to the map renderer.
@@ -104,6 +97,17 @@ class MinHeap {
 const COORD_DP = 6;
 function coordKey(c) {
     return c[0].toFixed(COORD_DP) + ',' + c[1].toFixed(COORD_DP);
+}
+
+// ── FIX 4: fast haversine distance in metres ────────────────
+//  No turf call, no object allocation — just arithmetic.
+function haversineDist(c1, c2) {
+    const R  = 6371000;
+    const φ1 = c1[1] * Math.PI / 180,  φ2 = c2[1] * Math.PI / 180;
+    const Δφ = (c2[1] - c1[1]) * Math.PI / 180;
+    const Δλ = (c2[0] - c1[0]) * Math.PI / 180;
+    const a  = Math.sin(Δφ/2)**2 + Math.cos(φ1)*Math.cos(φ2)*Math.sin(Δλ/2)**2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 }
 
 // ── build adjacency graph from segment list ──────────────────
@@ -219,6 +223,14 @@ async function calculateTheEntireNetwork(CompleteNetwork, SourceGeometry, UserGe
         u.nodeId = featureToNodeId(u.data, nodeIndex);
     }
 
+    // ── FIX 4: pre-compute maxDist per user ────────────────
+    //  maxDist = value / heatCutoff = the furthest distance at
+    //  which this user can ever contribute weight >= heatCutoff.
+    //  Computed once here; used in the skip-guard below.
+    for (const u of UserGeometryList) {
+        u.maxDist = heatCutoff > 0 ? u.value / heatCutoff : Infinity;
+    }
+
     // ── source seeds ───────────────────────────────────────
     let sourceNodeSeeds = [];
     let EntireNetwork   = [];
@@ -269,6 +281,16 @@ async function calculateTheEntireNetwork(CompleteNetwork, SourceGeometry, UserGe
     const distU        = new Float64Array(numNodes);  // reset each per-user Dijkstra
     const frontierDist = new Float64Array(numNodes).fill(Infinity);
 
+    // ── FIX 4: frontier coordinate list ────────────────────
+    //  Mirrors frontierDist — holds the [lng, lat] of every node
+    //  that has become reachable from the source so far.
+    //  Used by the skip-guard to compute straight-line distances
+    //  without touching frontierDist (which stores network distances).
+    const frontierCoords = [];
+    for (const { nodeId } of sourceNodeSeeds) {
+        if (nodeId >= 0) frontierCoords.push(nodes[nodeId]);
+    }
+
     // One heap per logical role; clear() between uses
     const heapPhase1   = new MinHeap();   // reused for EVERY per-user Dijkstra in Phase 1
     const heapFrontier = new MinHeap();   // reused in extendFrontier
@@ -306,6 +328,13 @@ async function calculateTheEntireNetwork(CompleteNetwork, SourceGeometry, UserGe
                 }
             }
         }
+
+        // ── FIX 4: record newly reachable node coordinates ─
+        //  Any node that now has a finite frontierDist and was
+        //  previously unreachable is added to frontierCoords so
+        //  future skip-guard checks stay accurate.
+        if (frontierDist[from] < Infinity) frontierCoords.push(nodes[from]);
+        if (frontierDist[to]   < Infinity) frontierCoords.push(nodes[to]);
     }
 
     // Seed frontier for any pre-built source-network segments
@@ -356,11 +385,37 @@ async function calculateTheEntireNetwork(CompleteNetwork, SourceGeometry, UserGe
         //  • heapPhase1 is cleared with clear() (O(1), no GC).
         //    Its internal arrays grow to peak size on the first
         //    iteration and stay there — no per-user allocation.
+        //
+        //  SPEED FIX (FIX 4):
+        //  • Before each Dijkstra, check the straight-line distance
+        //    from this user to every frontier node.  Straight-line
+        //    distance is always <= network distance, so if even the
+        //    nearest frontier node is farther than maxDist, the full
+        //    Dijkstra cannot produce any weight >= heatCutoff and is
+        //    skipped entirely.
 
         segWeight.fill(0);   // reset accumulated weights
 
         for (const user of UserGeometryList) {
             if (user.nodeId < 0) continue;
+
+            // ── FIX 4: skip-guard ───────────────────────────
+            //  Find the straight-line distance to the nearest
+            //  frontier node.  Break as soon as we find one
+            //  within range (early exit keeps this O(1) in the
+            //  common case where the frontier is already close).
+            const uCoord = nodes[user.nodeId];
+            let minToFrontier = Infinity;
+            for (const fc of frontierCoords) {
+                const d = haversineDist(uCoord, fc);
+                if (d < minToFrontier) {
+                    minToFrontier = d;
+                    if (minToFrontier <= user.maxDist) break;  // close enough — stop searching
+                }
+            }
+            if (minToFrontier > user.maxDist) continue;  // too far — skip Dijkstra entirely
+            // ── end skip-guard ──────────────────────────────
+
             const fixValue = user.value;
 
             // Reset distance buffer — same typed array every time

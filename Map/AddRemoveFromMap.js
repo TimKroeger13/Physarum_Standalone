@@ -38,13 +38,17 @@ async function AddGeoJsonToMapUserValues(LayerList, geoJson){
         if (value > max) max = value;
     });
 
-    var scaleSize = d3.scaleLinear()
-    .domain([min, max])
-    .range([4, 10]);
+    var exponent = 0.4; // probier 0.3, 0.5, 0.7 etc.
 
-    var scaleColor = d3.scaleLinear()
-    .domain([min, max])
-    .range(['#FF907C', '#680000']);
+    var scaleSize = d3.scalePow()
+        .exponent(exponent)
+        .domain([min, max])
+        .range([3, 10]);
+
+    var scaleColor = d3.scalePow()
+        .exponent(exponent)
+        .domain([min, max])
+        .range(['#ffffff', '#a10000']);
 
     var geoJsonLayer = L.geoJSON(geoJson, {
         pointToLayer: function (feature, latlng) {

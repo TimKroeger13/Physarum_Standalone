@@ -10,6 +10,7 @@ let CompleteNetworkList = [];
 
 let EntireNetworkList = [];
 let EndUserValueList = [];
+let CurrentConnectionList = [];
 
 async function InitializeMap() {
 
@@ -63,4 +64,13 @@ async function AddGeoJsonFeatureToMap_EndUser(geoJson, UsageMin, UsageMax){
 
     await RemoveLayer(EndUserValueList)
     await AddGeoJsonToMapUserValuesEndUser(EndUserValueList, geoJson, UsageMin, UsageMax)
+}
+
+async function AddGeoJsonFeatureToMap_CurrentConnection(geoJson) {
+    await RemoveLayer(CurrentConnectionList);
+    await AddGeoJsonToMap(CurrentConnectionList, geoJson, "#f88e03", false);
+}
+
+async function ClearCurrentConnection() {
+    await RemoveLayer(CurrentConnectionList);
 }

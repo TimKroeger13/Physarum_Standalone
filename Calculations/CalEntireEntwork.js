@@ -28,7 +28,7 @@
 // How often to push an update to the map renderer.
 // Lower = more live feedback, higher = less memory pressure.
 // 25 is a good default; raise to 50 if still tight on RAM.
-const MAP_UPDATE_INTERVAL = 25;
+const MAP_UPDATE_INTERVAL = 1;
 
 // ── binary min-heap – reuse via clear() ─────────────────────
 class MinHeap {
@@ -270,8 +270,10 @@ async function calculateTheEntireNetwork(CompleteNetwork, SourceGeometry, UserGe
     //    featureArray is mutated in-place (push only) so the
     //    wrapper object always reflects the current state without
     //    a new allocation every iteration.
-    const featureArray          = EntireNetwork.map(e => e.data);
-    const liveFeatureCollection = turf.featureCollection(featureArray);
+    const stableFeatureArray     = EntireNetwork.map(e => e.data);
+    const stableCollection       = turf.featureCollection(stableFeatureArray);
+    const currentBatchArray      = [];
+    const currentBatchCollection = turf.featureCollection(currentBatchArray);
 
     // ── FIX 1 + 2: pre-allocate ALL reusable buffers once ──
     //    These are NEVER re-allocated inside any loop.
@@ -396,26 +398,26 @@ async function calculateTheEntireNetwork(CompleteNetwork, SourceGeometry, UserGe
 
         segWeight.fill(0);   // reset accumulated weights
 
+        let includedCount = 0;
+        let skippedCount  = 0;
+
         for (const user of UserGeometryList) {
             if (user.nodeId < 0) continue;
 
             // ── FIX 4: skip-guard ───────────────────────────
-            //  Find the straight-line distance to the nearest
-            //  frontier node.  Break as soon as we find one
-            //  within range (early exit keeps this O(1) in the
-            //  common case where the frontier is already close).
             const uCoord = nodes[user.nodeId];
             let minToFrontier = Infinity;
             for (const fc of frontierCoords) {
                 const d = haversineDist(uCoord, fc);
                 if (d < minToFrontier) {
                     minToFrontier = d;
-                    if (minToFrontier <= user.maxDist) break;  // close enough — stop searching
+                    if (minToFrontier <= user.maxDist) break;
                 }
             }
-            if (minToFrontier > user.maxDist) continue;  // too far — skip Dijkstra entirely
+            if (minToFrontier > user.maxDist) { skippedCount++; continue; }
             // ── end skip-guard ──────────────────────────────
 
+            includedCount++;
             const fixValue = user.value;
 
             // Reset distance buffer — same typed array every time
@@ -528,10 +530,11 @@ async function calculateTheEntireNetwork(CompleteNetwork, SourceGeometry, UserGe
             last.PathTotalProfit = RunningUsage / RunningLength;
         }
 
-        // Push new segments incrementally — no full .map() copy
+        // Push new segments — stable gets previous iterations, current batch gets this one
+        currentBatchArray.length = 0;  // clear previous iteration's batch
         for (const step of CompletePath) {
             EntireNetwork.push(step);
-            featureArray.push(step.data);  // featureArray === liveFeatureCollection.features
+            currentBatchArray.push(step.data);  // red layer for this iteration
         }
 
         // O(1) swap-remove: swap found user with last element, then pop
@@ -540,22 +543,30 @@ async function calculateTheEntireNetwork(CompleteNetwork, SourceGeometry, UserGe
         if (removeIdx !== lastIdx) UserGeometryList[removeIdx] = UserGeometryList[lastIdx];
         UserGeometryList.pop();
 
-        // ── FIX 3: throttled map update ────────────────────
-        //
-        //  Leaflet creates DOM / canvas objects on every call to
-        //  AddGeoJsonFeatureToMap_EntireNetwork.  Calling it 1000+
-        //  times fills the heap with layer objects.
-        //
-        //  We update every MAP_UPDATE_INTERVAL iterations and always
-        //  on the very last iteration.  liveFeatureCollection is the
-        //  SAME object reference every call so Leaflet can replace
-        //  rather than accumulate its internal layer data.
-        if (calculationCounter % MAP_UPDATE_INTERVAL === 0 || UserGeometryList.length === 0) {
-            await AddGeoJsonFeatureToMap_EntireNetwork(liveFeatureCollection);
-            await new Promise(resolve => setTimeout(resolve, 0));  // yield to UI + GC
+        // ── FIX 3: map update — stable green + current batch red ──
+        const isFinal = UserGeometryList.length === 0;
+
+        if (calculationCounter % MAP_UPDATE_INTERVAL === 0 || isFinal) {
+            if (isFinal) {
+                // Fold current batch into stable and render everything green
+                for (const f of currentBatchArray) stableFeatureArray.push(f);
+                currentBatchArray.length = 0;
+                await AddGeoJsonFeatureToMap_EntireNetwork(stableCollection);
+                await ClearCurrentConnection();
+            } else {
+                // Render stable as green, current iteration's batch as red
+                await AddGeoJsonFeatureToMap_EntireNetwork(stableCollection);
+                await AddGeoJsonFeatureToMap_CurrentConnection(currentBatchCollection);
+                // Fold current batch into stable now that it's been displayed
+                for (const f of currentBatchArray) stableFeatureArray.push(f);
+                currentBatchArray.length = 0;
+            }
         }
 
-        updateLoadingStatus(calculationCounter, calculationTotalLength);
+        // Yield to the browser event loop on every iteration.
+        await new Promise(resolve => setTimeout(resolve, 0));
+
+        updateLoadingStatus(calculationCounter, calculationTotalLength, includedCount, skippedCount);
     }
 
     return [EntireNetwork, EntireUsage];

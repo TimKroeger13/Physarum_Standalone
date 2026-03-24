@@ -1,8 +1,8 @@
 async function RemoveLayer(LayerList){
     for (const layer of LayerList) {
         map.removeLayer(layer);
-      }
-      LayerList = [];
+    }
+    LayerList.length = 0;  // clears the original array in-place
 }
 
 async function AddGeoJsonToMap(LayerList, geoJson, color, zoom){

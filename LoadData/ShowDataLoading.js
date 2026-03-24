@@ -34,10 +34,10 @@ function ShowGrafics() {
     document.querySelector('.DisplayData').style.height = '69vh';
 }
 
-function updateLoadingStatus(calculationCounter, calculationTotalLength) {
+function updateLoadingStatus(calculationCounter, calculationTotalLength, includedCount, skippedCount) {
     const el = document.getElementById('calPath');
     if (el) {
-        const pct = Math.round((calculationCounter / calculationTotalLength) * 100);
-        el.innerHTML = `Calculate Paths: ${calculationCounter} / ${calculationTotalLength} &nbsp;·&nbsp; ${pct}%`;
+        const pct = Math.round((calculationCounter / calculationTotalLength) * 1000)/10;
+        el.innerHTML = `Calculate Paths: ${calculationCounter} / ${calculationTotalLength} &nbsp;·&nbsp; ${pct}% &nbsp;·&nbsp; [${includedCount}]`;
     }
 }

@@ -7,6 +7,7 @@ async function RemoveLayer(LayerList){
 
 async function AddGeoJsonToMap(LayerList, geoJson, color, zoom){
     geoJsonLayer = L.geoJSON(geoJson, {
+        renderer: _canvasRenderer,
         style: function (feature) {
             return {
                 color: color,
@@ -53,6 +54,7 @@ async function AddGeoJsonToMapUserValues(LayerList, geoJson){
     var geoJsonLayer = L.geoJSON(geoJson, {
         pointToLayer: function (feature, latlng) {
             return L.circleMarker(latlng, {
+                pane: 'pointsPane',
                 radius: scaleSize(feature.properties.value),
                 fillColor: scaleColor(feature.properties.value),
                 color: '#000000',

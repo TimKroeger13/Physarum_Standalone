@@ -50,9 +50,14 @@
       <span class="titel-text">Physarum Netzplaner</span>
       <span class="titel-sub">weighted network optimizer</span>
     </div>
-    <div class="titel-right">
+<div class="titel-right">
       <span class="titel-badge">PROTOTYP</span>
-      <!-- Collapse toggle — always visible even when collapsed -->
+      <!-- Tile switcher -->
+      <div class="tile-switcher">
+        <button id="tileOsm"  class="btn btn-ghost active" onclick="switchTileLayer('osm')">OSM</button>
+        <button id="tileDark" class="btn btn-ghost"        onclick="switchTileLayer('dark')">Dark</button>
+      </div>
+      <!-- Collapse toggle -->
       <button id="collapseToggle" class="collapse-btn" onclick="toggleUICollapse()" title="Collapse panel (show map + slider only)">
         <span id="collapseIcon">▲</span>
       </button>

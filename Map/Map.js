@@ -12,16 +12,41 @@ let EntireNetworkList = [];
 let EndUserValueList = [];
 let CurrentConnectionList = [];
 
+const _canvasRenderer = L.canvas({ padding: 0.5 });
+
 async function InitializeMap() {
 
     map = L.map('map', {
-        keyboard: false
+        keyboard: false,
+        preferCanvas: true
       }).setView([52.52, 13.40], 12);
 
-    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 20,
-        attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-    }).addTo(map);
+    // Custom pane for points — always renders above all line layers
+    map.createPane('pointsPane');
+    map.getPane('pointsPane').style.zIndex = 650;
+
+window._tileLayers = {
+        osm: L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 20,
+            attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+        }),
+        dark: L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            maxZoom: 20,
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>'
+        })
+    };
+
+    window._activeTile = 'osm';
+    window._tileLayers.osm.addTo(map);
+}
+
+function switchTileLayer(name) {
+    if (window._activeTile === name) return;
+    map.removeLayer(window._tileLayers[window._activeTile]);
+    window._tileLayers[name].addTo(map);
+    window._activeTile = name;
+    document.getElementById('tileOsm').classList.toggle('active', name === 'osm');
+    document.getElementById('tileDark').classList.toggle('active', name === 'dark');
 }
 
 async function AddGeoJsonFeatureToMap_Source(geoJson){

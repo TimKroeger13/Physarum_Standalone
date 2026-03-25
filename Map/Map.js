@@ -21,9 +21,6 @@ async function InitializeMap() {
         preferCanvas: true
       }).setView([52.52, 13.40], 12);
 
-    // Custom pane for points — always renders above all line layers
-    map.createPane('pointsPane');
-    map.getPane('pointsPane').style.zIndex = 650;
 
 window._tileLayers = {
         osm: L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {

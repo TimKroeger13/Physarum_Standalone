@@ -18,20 +18,20 @@ function ShowGrafics() {
     // Show chart panel (20vh tall)
     const chart = document.querySelector('.BarPlot');
     chart.style.visibility = 'visible';
-    chart.style.height = '20vh';
+    chart.style.height = '12vh';
 
     // Show slider (2vh)
     const slider = document.querySelector('.Slider');
     slider.style.visibility = 'visible';
     slider.style.height = '2vh';
 
-    // Show results bar (4vh)
+    // Show results bar (3vh)
     const results = document.querySelector('.Results');
     results.style.visibility = 'visible';
-    results.style.height = '4vh';
+    results.style.height = '3vh';
 
-    // Shrink map to fit — total header rows: 5 + 0 + 20 + 2 + 4 = 31vh
-    document.querySelector('.DisplayData').style.height = '69vh';
+    // Shrink map to fit — total header rows: 4 + 0 + 12 + 2 + 3 = 23vh
+    document.querySelector('.DisplayData').style.height = '78vh';
 }
 
 function updateLoadingStatus(calculationCounter, calculationTotalLength, includedCount, skippedCount) {

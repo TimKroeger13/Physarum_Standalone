@@ -407,7 +407,7 @@ async function calculateTheEntireNetwork(CompleteNetwork, SourceGeometry, UserGe
         let includedCount = 0;
         let skippedCount  = 0;
 
-        for (const user of activeList) {
+        for (const user of UserGeometryList) {
             if (user.nodeId < 0) continue;
 
             // ── FIX 4: skip-guard ───────────────────────────

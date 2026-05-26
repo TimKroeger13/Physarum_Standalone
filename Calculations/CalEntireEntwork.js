@@ -514,6 +514,135 @@ async function calculateTheEntireNetwork(CompleteNetwork, SourceGeometry, UserGe
 
         if (!FoundUsage) FoundUsage = UserGeometryList[0];
 
+        // ── PATH CLEANUP: remove detour branches ──────────
+        //
+        //  The greedy expansion sometimes builds detours, e.g.
+        //    A → A' → B → [backtrack] → A'' → User
+        //  These segments aren't on the direct anchor→user path.
+        //
+        //  Strategy: build a mini-graph of just CompletePath's
+        //  segments, run Dijkstra from the user node to the
+        //  nearest "anchor" (any node already connected to the
+        //  source through prior built segments), keep only those
+        //  segments, restore the rest to availableSegs, then
+        //  recompute frontierDist from scratch so phantom
+        //  distances left by the removed segments don't corrupt
+        //  future iterations.
+        if (CompletePath.length > 1 && FoundUsage) {
+            const userNid = FoundUsage.nodeId;
+
+            // Anchor nodes = nodes reachable from source through
+            // segments built in PRIOR iterations only.
+            // = source seeds ∪ endpoints of (builtSegIds − currentPath)
+            const currentPathIds = new Set();
+            for (const s of CompletePath) currentPathIds.add(s.id);
+
+            const anchorNodes = new Set();
+            for (const { nodeId } of sourceNodeSeeds)
+                if (nodeId >= 0) anchorNodes.add(nodeId);
+            for (const segId of builtSegIds)
+                if (!currentPathIds.has(segId)) {
+                    anchorNodes.add(segNodes[segId].from);
+                    anchorNodes.add(segNodes[segId].to);
+                }
+
+            // Mini-graph: adjacency list over CompletePath indices
+            const miniAdj = new Map();
+            for (let i = 0; i < CompletePath.length; i++) {
+                const { from, to } = segNodes[CompletePath[i].id];
+                const len = CompletePath[i].length;
+                if (!miniAdj.has(from)) miniAdj.set(from, []);
+                if (!miniAdj.has(to))   miniAdj.set(to,   []);
+                miniAdj.get(from).push({ idx: i, other: to,   len });
+                miniAdj.get(to)  .push({ idx: i, other: from, len });
+            }
+
+            // Dijkstra from user → nearest anchor (shortest by length)
+            const miniDist = new Map([[userNid, 0]]);
+            const miniPrev = new Map();          // nodeId → { segIdx, via }
+            heapFrontier.clear();
+            heapFrontier.push(0, userNid);
+            let anchorReached = -1;
+
+            dijkLoop: while (heapFrontier.size) {
+                const { priority: d, node: u } = heapFrontier.pop();
+                if (d > (miniDist.get(u) ?? Infinity)) continue;
+                if (anchorNodes.has(u) && u !== userNid) {
+                    anchorReached = u; break dijkLoop;
+                }
+                for (const { idx, other, len } of (miniAdj.get(u) || [])) {
+                    const nd = d + len;
+                    if (nd < (miniDist.get(other) ?? Infinity)) {
+                        miniDist.set(other, nd);
+                        miniPrev.set(other, { segIdx: idx, via: u });
+                        heapFrontier.push(nd, other);
+                    }
+                }
+            }
+
+            if (anchorReached >= 0) {
+                // Trace shortest path back from anchor to user
+                const keptIdx = new Set();
+                let cur = anchorReached;
+                while (miniPrev.has(cur)) {
+                    const { segIdx, via } = miniPrev.get(cur);
+                    keptIdx.add(segIdx);
+                    cur = via;
+                }
+
+                if (keptIdx.size < CompletePath.length) {
+                    // Remove detour segments from built state
+                    for (let i = 0; i < CompletePath.length; i++) {
+                        if (!keptIdx.has(i)) {
+                            builtSegIds.delete(CompletePath[i].id);
+                            availableSegs.add(CompletePath[i].id);
+                            RunningLength -= CompletePath[i].length;
+                            RunningOrder--;
+                        }
+                    }
+
+                    // Compact CompletePath in-place to kept segments only
+                    let wi = 0;
+                    for (let i = 0; i < CompletePath.length; i++)
+                        if (keptIdx.has(i)) CompletePath[wi++] = CompletePath[i];
+                    CompletePath.length = wi;
+
+                    // Rewrite cumulative PathLength for remaining segments
+                    let cumLen = RunningLength;
+                    for (const s of CompletePath) cumLen -= s.length;
+                    for (const s of CompletePath) { cumLen += s.length; s.PathLength = cumLen; }
+
+                    // Recompute frontierDist + frontierCoords from scratch.
+                    // extendFrontier set finite distances on the removed nodes;
+                    // those phantom values would corrupt future segment selection.
+                    frontierDist.fill(Infinity);
+                    heapFrontier.clear();
+                    for (const { nodeId, distSoFar } of sourceNodeSeeds) {
+                        if (nodeId >= 0) {
+                            frontierDist[nodeId] = distSoFar;
+                            heapFrontier.push(distSoFar, nodeId);
+                        }
+                    }
+                    while (heapFrontier.size) {
+                        const { priority: d, node: u } = heapFrontier.pop();
+                        if (d > frontierDist[u]) continue;
+                        for (const edge of adj[u]) {
+                            if (!builtSegIds.has(edge.segId)) continue;
+                            const nd = d + edge.length;
+                            if (nd < frontierDist[edge.to]) {
+                                frontierDist[edge.to] = nd;
+                                heapFrontier.push(nd, edge.to);
+                            }
+                        }
+                    }
+                    frontierCoords.length = 0;
+                    for (let ni = 0; ni < numNodes; ni++)
+                        if (frontierDist[ni] < Infinity) frontierCoords.push(nodes[ni]);
+                }
+            }
+        }
+        // ── end path cleanup ───────────────────────────────
+
         // ── PHASE 3: finalise ──────────────────────────────
         RunningUsage += FoundUsage.value;
         EntireUsage.push({

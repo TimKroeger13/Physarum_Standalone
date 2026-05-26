@@ -125,19 +125,27 @@ async function calculate(){
     // Otherwise a zero-demand forced placeholder is inserted.
     if (ForcedGeometry) {
         const FORCED_WEIGHT  = 1e9;   // dominates all real demand weights
-        const OVERLAP_KM     = 0.010; // 10 metres overlap threshold
+        const OVERLAP_KM     = 0.001; // 1 metre — must be essentially the same point
         for (const ff of ForcedGeometry.features) {
             if (ff.geometry.type !== 'Point') continue;
-            let overlapped = false;
-            for (const uf of userGeomForCalc.features) {
+
+            // Find the single nearest demand point within 1 m
+            let nearestIdx  = -1;
+            let nearestDist = Infinity;
+            for (let i = 0; i < userGeomForCalc.features.length; i++) {
+                const uf = userGeomForCalc.features[i];
                 if (uf.geometry.type !== 'Point') continue;
-                if (turf.distance(ff, uf, { units: 'kilometers' }) < OVERLAP_KM) {
-                    uf.properties.forcedWeight = FORCED_WEIGHT;
-                    overlapped = true;
-                    break;
+                const d = turf.distance(ff, uf, { units: 'kilometers' });
+                if (d < OVERLAP_KM && d < nearestDist) {
+                    nearestDist = d;
+                    nearestIdx  = i;
                 }
             }
-            if (!overlapped) {
+
+            if (nearestIdx >= 0) {
+                // Promote that single demand point to forced
+                userGeomForCalc.features[nearestIdx].properties.forcedWeight = FORCED_WEIGHT;
+            } else {
                 // Standalone forced point — no real demand value
                 userGeomForCalc.features.push({
                     type: 'Feature',

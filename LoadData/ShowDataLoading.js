@@ -1,8 +1,7 @@
 // ShowDataLoading.js — UI state transitions
 
 function ShowLoadDataClass() {
-    document.querySelector('.LoadData').style.visibility = 'hidden';
-    document.querySelector('.LoadData').style.height = '0';
+    document.querySelector('.LoadData').style.display = 'none';
 
     const loading = document.querySelector('.InLoading');
     loading.style.visibility = 'visible';

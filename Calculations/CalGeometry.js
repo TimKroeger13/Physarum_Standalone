@@ -103,13 +103,19 @@ async function calculate(){
 
     ShowLoadDataClass()
 
-    var pointFeatures = await getNearestPointsOfFeatureCollectionAndLine(SourceGeometry, NetworkGeometry, UserGeometry);
+    // Shallow copy so the original UserGeometry is never mutated.
+    // The point-source path in getNearestPointsOfFeatureCollectionAndLine appends
+    // the source feature to the user list; without a copy each re-run accumulates
+    // an extra phantom source point, causing the algorithm to over-build.
+    const userGeomForCalc = { type: 'FeatureCollection', features: [...UserGeometry.features] };
+
+    var pointFeatures = await getNearestPointsOfFeatureCollectionAndLine(SourceGeometry, NetworkGeometry, userGeomForCalc);
 
     var newPointFeatures = turf.featureCollection(pointFeatures);
 
     ConnectionPoints = newPointFeatures;
 
-    ConnectionLines = connectPoints(UserGeometry, newPointFeatures);
+    ConnectionLines = connectPoints(userGeomForCalc, newPointFeatures);
 
     await AddGeoJsonFeatureToMap_UserOneLine(ConnectionLines);
 
@@ -121,7 +127,7 @@ async function calculate(){
     var initialNetwork = turf.featureCollection(SourceGeometry.features);
     await AddGeoJsonFeatureToMap_EntireNetwork(initialNetwork);
 
-    [EntireNetwork, EntireUsage] = await calculateTheEntireNetwork(CompleteNetwork, SourceGeometry, UserGeometry)
+    [EntireNetwork, EntireUsage] = await calculateTheEntireNetwork(CompleteNetwork, SourceGeometry, userGeomForCalc)
     //Display on map
     
     for (let i = 0; i < EntireNetwork.length; i++) {
@@ -285,4 +291,50 @@ function download(content, fileName, contentType) {
     a.href = URL.createObjectURL(file);
     a.download = fileName;
     a.click();
+}
+
+async function resetToInput() {
+    // Clear calculation results
+    ConnectionPoints = undefined;
+    ConnectionLines = undefined;
+    EntireNetwork = undefined;
+    EntireUsage = undefined;
+    TotalEndOutputDisplay = [];
+    TotalEndUsageDisplay = [];
+    EntireUsageOccurence = [];
+    EntireUsageId = [];
+    UsageMin = undefined;
+    UsageMax = undefined;
+
+    // Remove calculation map layers, keep Source/Network/User
+    await RemoveLayer(UserOnLineList);
+    await RemoveLayer(EntireNetworkList);
+    await RemoveLayer(EndUserValueList);
+    await RemoveLayer(CurrentConnectionList);
+
+    // Clear chart
+    document.getElementById('chartPanel').innerHTML = '';
+
+    // Reset slider
+    const slider = document.getElementById('slider');
+    slider.min = 1;
+    slider.max = 10;
+    slider.value = 1;
+
+    // Reset result labels
+    document.getElementById('UsageProfit').innerHTML = '—';
+    document.getElementById('UsageNum').innerHTML = '—';
+    document.getElementById('TotalLength').innerHTML = '—';
+
+    // Restore UI: show load bar, hide charts/slider/results, expand map
+    document.querySelector('.LoadData').style.display = '';
+    document.querySelector('.InLoading').style.visibility = 'hidden';
+    document.querySelector('.InLoading').style.height = '0';
+    document.querySelector('.BarPlot').style.visibility = 'hidden';
+    document.querySelector('.BarPlot').style.height = '0';
+    document.querySelector('.Slider').style.visibility = 'hidden';
+    document.querySelector('.Slider').style.height = '0';
+    document.querySelector('.Results').style.visibility = 'hidden';
+    document.querySelector('.Results').style.height = '0';
+    document.querySelector('.DisplayData').style.height = '93vh';
 }

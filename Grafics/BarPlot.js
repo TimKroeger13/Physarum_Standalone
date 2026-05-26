@@ -146,7 +146,7 @@ function _buildCharts() {
     const H = container.clientHeight;
     if (W < 10 || H < 10) return;
 
-    const oH = Math.max(40, Math.round(H * 0.42));
+    const oH = Math.max(40, Math.round(H * 0.50));
     const dH = H - oH;
 
     const oP = { t: 10, r: 14, b: 20, l: 46 };

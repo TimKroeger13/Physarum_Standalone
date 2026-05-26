@@ -29,6 +29,11 @@ function ShowGrafics() {
     results.style.visibility = 'visible';
     results.style.height = '3vh';
 
+    // Show drag handle
+    const handle = document.getElementById('resizeHandle');
+    handle.style.visibility = 'visible';
+    handle.style.height = '6px';
+
     // Shrink map to fit — total header rows: 4 + 0 + 12 + 2 + 3 = 23vh
     document.querySelector('.DisplayData').style.height = '78vh';
 }

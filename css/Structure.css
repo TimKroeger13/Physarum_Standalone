@@ -361,6 +361,42 @@ body {
   color: var(--accent);
 }
 
+/* ── Resize handle ───────────────────────────────────────── */
+.resize-handle {
+  height: 0;
+  visibility: hidden;
+  flex-shrink: 0;
+  background: var(--surface);
+  border-top: 1px solid var(--border-dim);
+  cursor: ns-resize;
+  position: relative;
+  overflow: hidden;
+  transition: background 0.15s, border-color 0.15s;
+}
+.resize-handle::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 36px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--muted);
+  opacity: 0.35;
+  transition: opacity 0.15s, background 0.15s;
+}
+.resize-handle:hover,
+.resize-handle.dragging {
+  background: rgba(114,255,0,0.06);
+  border-color: rgba(114,255,0,0.35);
+}
+.resize-handle:hover::after,
+.resize-handle.dragging::after {
+  opacity: 1;
+  background: var(--accent);
+}
+
 /* ── Map ─────────────────────────────────────────────────── */
 .DisplayData {
   height: 93vh;
@@ -397,6 +433,11 @@ body.ui-collapsed .Results {
   height: 0 !important;
   visibility: hidden !important;
   overflow: hidden !important;
+}
+
+body.ui-collapsed .resize-handle {
+  height: 0 !important;
+  visibility: hidden !important;
 }
 
 /* Header: shrink to just show the collapse button */

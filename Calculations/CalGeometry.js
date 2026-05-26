@@ -326,8 +326,11 @@ async function resetToInput() {
     document.getElementById('UsageNum').innerHTML = '—';
     document.getElementById('TotalLength').innerHTML = '—';
 
-    // Restore UI: show load bar, hide charts/slider/results, expand map
+    // Restore UI: show load bar, hide charts/slider/results/handle, expand map
     document.querySelector('.LoadData').style.display = '';
+    const handle = document.getElementById('resizeHandle');
+    handle.style.visibility = 'hidden';
+    handle.style.height = '0';
     document.querySelector('.InLoading').style.visibility = 'hidden';
     document.querySelector('.InLoading').style.height = '0';
     document.querySelector('.BarPlot').style.visibility = 'hidden';

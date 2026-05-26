@@ -133,6 +133,9 @@
     </div>
   </div>
 
+  <!-- ── Resize handle ──────────────────────────────────── -->
+  <div class="resize-handle" id="resizeHandle"></div>
+
   <!-- ── Map ─────────────────────────────────────────────── -->
   <div class="DisplayData" id="map"></div>
 
@@ -143,6 +146,53 @@
     });
 
     document.getElementById('slider').addEventListener('input', SliderMove);
+
+    // ── Drag-to-resize: top panel vs map ────────────────────
+    (function () {
+      const handle = document.getElementById('resizeHandle');
+      let dragging = false;
+
+      handle.addEventListener('mousedown', function (e) {
+        dragging = true;
+        handle.classList.add('dragging');
+        document.body.style.cursor      = 'ns-resize';
+        document.body.style.userSelect  = 'none';
+        e.preventDefault();
+      });
+
+      document.addEventListener('mousemove', function (e) {
+        if (!dragging) return;
+
+        const titleH   = document.querySelector('.Titel').offsetHeight;
+        const sliderH  = document.querySelector('.Slider').offsetHeight;
+        const resultsH = document.querySelector('.Results').offsetHeight;
+        const handleH  = handle.offsetHeight;
+
+        // Clamp mouse so charts never vanish and map never disappears
+        const minY = titleH + sliderH + resultsH + 40;   // 40px min chart
+        const maxY = window.innerHeight - handleH - 80;  // 80px min map
+        const y    = Math.max(minY, Math.min(maxY, e.clientY));
+
+        const newBarPlotH = y - titleH - sliderH - resultsH;
+        const newMapH     = window.innerHeight - y - handleH;
+
+        document.querySelector('.BarPlot').style.height     = newBarPlotH + 'px';
+        document.querySelector('.DisplayData').style.height = newMapH     + 'px';
+      });
+
+      document.addEventListener('mouseup', function () {
+        if (!dragging) return;
+        dragging = false;
+        handle.classList.remove('dragging');
+        document.body.style.cursor     = '';
+        document.body.style.userSelect = '';
+
+        // Redraw charts to fit their new pixel dimensions
+        if (typeof _buildCharts === 'function' && _built) _buildCharts();
+        // Let Leaflet recalculate the map canvas size
+        if (window.map) window.map.invalidateSize();
+      });
+    })();
 
     // ── Collapse logic ──────────────────────────────────────
     let _uiCollapsed = false;

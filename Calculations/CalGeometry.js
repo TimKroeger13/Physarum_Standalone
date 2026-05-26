@@ -354,6 +354,7 @@ async function resetToInput() {
 
     // Remove calculation map layers, keep Source/Network/User
     await RemoveLayer(UserOnLineList);
+    await RemoveLayer(EntireNetworkGlowList);
     await RemoveLayer(EntireNetworkList);
     await RemoveLayer(EndUserValueList);
     await RemoveLayer(CurrentConnectionList);

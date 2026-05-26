@@ -508,3 +508,14 @@ body.ui-collapsed .DisplayData {
   font-size: 0.75em !important;
 }
 .leaflet-popup-tip { background: var(--surface) !important; }
+
+/* ── Source supply marker (diamond) ─────────────────────── */
+.source-diamond {
+  width: 12px;
+  height: 12px;
+  background: #FF7200;
+  border: 2.5px solid rgba(255,255,255,0.90);
+  transform: rotate(45deg);
+  margin: 4px;
+  box-shadow: 0 0 10px rgba(255,114,0,0.75), 0 0 4px rgba(255,255,255,0.25);
+}

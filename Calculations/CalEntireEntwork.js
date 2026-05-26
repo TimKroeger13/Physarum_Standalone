@@ -587,14 +587,17 @@ async function calculateTheEntireNetwork(CompleteNetwork, SourceGeometry, UserGe
             }
 
             if (anchorReached >= 0) {
-                // Trace shortest path back from anchor to user
-                const keptIdx = new Set();
+                // Trace shortest path from anchor → user, collecting segIdx IN ORDER.
+                // miniPrev walks anchor→user (each entry points toward the user side),
+                // so orderedSegIdx comes out in the correct visual build order.
+                const orderedSegIdx = [];
                 let cur = anchorReached;
                 while (miniPrev.has(cur)) {
                     const { segIdx, via } = miniPrev.get(cur);
-                    keptIdx.add(segIdx);
+                    orderedSegIdx.push(segIdx);
                     cur = via;
                 }
+                const keptIdx = new Set(orderedSegIdx);
 
                 if (keptIdx.size < CompletePath.length) {
                     // Remove detour segments from built state
@@ -607,11 +610,10 @@ async function calculateTheEntireNetwork(CompleteNetwork, SourceGeometry, UserGe
                         }
                     }
 
-                    // Compact CompletePath in-place to kept segments only
-                    let wi = 0;
-                    for (let i = 0; i < CompletePath.length; i++)
-                        if (keptIdx.has(i)) CompletePath[wi++] = CompletePath[i];
-                    CompletePath.length = wi;
+                    // Rebuild CompletePath in network order (anchor → user)
+                    const reordered = orderedSegIdx.map(idx => CompletePath[idx]);
+                    CompletePath.length = 0;
+                    for (const s of reordered) CompletePath.push(s);
 
                     // Rewrite cumulative PathLength for remaining segments
                     let cumLen = RunningLength;

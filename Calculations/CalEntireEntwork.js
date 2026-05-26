@@ -615,10 +615,17 @@ async function calculateTheEntireNetwork(CompleteNetwork, SourceGeometry, UserGe
                     CompletePath.length = 0;
                     for (const s of reordered) CompletePath.push(s);
 
-                    // Rewrite cumulative PathLength for remaining segments
+                    // Rewrite cumulative PathLength and PathTotalProfit for remaining segments.
+                    // Stale Phase-2 profit values no longer match each segment's position
+                    // after reordering; recalculate from the current base (pre-Phase-3 RunningUsage).
+                    // Phase 3 will overwrite only the last segment with the connected user's value.
                     let cumLen = RunningLength;
                     for (const s of CompletePath) cumLen -= s.length;
-                    for (const s of CompletePath) { cumLen += s.length; s.PathLength = cumLen; }
+                    for (const s of CompletePath) {
+                        cumLen += s.length;
+                        s.PathLength      = cumLen;
+                        s.PathTotalProfit = RunningUsage / cumLen;
+                    }
 
                     // Recompute frontierDist + frontierCoords from scratch.
                     // extendFrontier set finite distances on the removed nodes;

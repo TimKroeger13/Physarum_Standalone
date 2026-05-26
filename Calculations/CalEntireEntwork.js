@@ -211,10 +211,11 @@ async function calculateTheEntireNetwork(CompleteNetwork, SourceGeometry, UserGe
 
     // ── user points ────────────────────────────────────────
     let UserGeometryList = UserGeometry.features.map((f, i) => ({
-        id:     i,
-        data:   f,
-        value:  f.properties.value,
-        nodeId: -1
+        id:          i,
+        data:        f,
+        value:       f.properties.value,
+        weightValue: f.properties.forcedWeight ?? f.properties.value,
+        nodeId:      -1
     }));
 
     if (sourceIsPoint) UserGeometryList.pop();
@@ -228,7 +229,7 @@ async function calculateTheEntireNetwork(CompleteNetwork, SourceGeometry, UserGe
     //  which this user can ever contribute weight >= heatCutoff.
     //  Computed once here; used in the skip-guard below.
     for (const u of UserGeometryList) {
-        u.maxDist = heatCutoff > 0 ? u.value / heatCutoff : Infinity;
+        u.maxDist = heatCutoff > 0 ? u.weightValue / heatCutoff : Infinity;
     }
 
     // ── source seeds ───────────────────────────────────────
@@ -418,7 +419,7 @@ async function calculateTheEntireNetwork(CompleteNetwork, SourceGeometry, UserGe
             // ── end skip-guard ──────────────────────────────
 
             includedCount++;
-            const fixValue = user.value;
+            const fixValue = user.weightValue;
 
             // Reset distance buffer — same typed array every time
             distU.fill(Infinity);

@@ -11,6 +11,7 @@ let CompleteNetworkList = [];
 let EntireNetworkList = [];
 let EndUserValueList = [];
 let CurrentConnectionList = [];
+let ForcedList = [];
 
 const _canvasRenderer = L.canvas({ padding: 0.5 });
 
@@ -95,4 +96,28 @@ async function AddGeoJsonFeatureToMap_CurrentConnection(geoJson) {
 
 async function ClearCurrentConnection() {
     await RemoveLayer(CurrentConnectionList);
+}
+
+async function AddGeoJsonFeatureToMap_Forced(geoJson) {
+    await RemoveLayer(ForcedList);
+    const layer = L.geoJSON(geoJson, {
+        renderer: _canvasRenderer,
+        pointToLayer: function (feature, latlng) {
+            return L.circleMarker(latlng, {
+                radius: 9,
+                fillColor: '#c060ff',
+                color: '#ffffff',
+                weight: 2,
+                opacity: 1,
+                fillOpacity: 0.85
+            });
+        },
+        onEachFeature: function (feature, layer) {
+            layer.bindPopup('Forced connection' +
+                (feature.properties && feature.properties.value
+                    ? ' · ' + feature.properties.value : ''));
+        }
+    }).addTo(map);
+    if (layer.getLayers().length) map.fitBounds(layer.getBounds());
+    ForcedList.push(layer);
 }

@@ -1,6 +1,7 @@
 var SourceGeometry;
 var NetworkGeometry;
 var UserGeometry;
+var ForcedGeometry;
 
 var ConnectionPoints;
 var ConnectionLines;
@@ -34,6 +35,13 @@ async function loadUserData(){
     UserGeometry = await loadData();
 
     await AddGeoJsonFeatureToMap_User(UserGeometry);
+}
+
+async function loadForcedData() {
+
+    ForcedGeometry = await loadData();
+
+    await AddGeoJsonFeatureToMap_Forced(ForcedGeometry);
 }
 
 //model
@@ -103,11 +111,42 @@ async function calculate(){
 
     ShowLoadDataClass()
 
-    // Shallow copy so the original UserGeometry is never mutated.
-    // The point-source path in getNearestPointsOfFeatureCollectionAndLine appends
-    // the source feature to the user list; without a copy each re-run accumulates
-    // an extra phantom source point, causing the algorithm to over-build.
-    const userGeomForCalc = { type: 'FeatureCollection', features: [...UserGeometry.features] };
+    // Copy UserGeometry so the original is never mutated.
+    // Property objects are also copied so we can stamp forcedWeight onto them
+    // without affecting the source data across re-runs.
+    const userGeomForCalc = {
+        type: 'FeatureCollection',
+        features: UserGeometry.features.map(f => ({ ...f, properties: { ...f.properties } }))
+    };
+
+    // ── Apply forced connections ───────────────────────────────
+    // For each forced point: if it overlaps a demand point (≤10 m)
+    // that demand point is promoted to forced (keeps its value).
+    // Otherwise a zero-demand forced placeholder is inserted.
+    if (ForcedGeometry) {
+        const FORCED_WEIGHT  = 1e9;   // dominates all real demand weights
+        const OVERLAP_KM     = 0.010; // 10 metres overlap threshold
+        for (const ff of ForcedGeometry.features) {
+            if (ff.geometry.type !== 'Point') continue;
+            let overlapped = false;
+            for (const uf of userGeomForCalc.features) {
+                if (uf.geometry.type !== 'Point') continue;
+                if (turf.distance(ff, uf, { units: 'kilometers' }) < OVERLAP_KM) {
+                    uf.properties.forcedWeight = FORCED_WEIGHT;
+                    overlapped = true;
+                    break;
+                }
+            }
+            if (!overlapped) {
+                // Standalone forced point — no real demand value
+                userGeomForCalc.features.push({
+                    type: 'Feature',
+                    geometry: ff.geometry,
+                    properties: { value: 0, forcedWeight: FORCED_WEIGHT }
+                });
+            }
+        }
+    }
 
     var pointFeatures = await getNearestPointsOfFeatureCollectionAndLine(SourceGeometry, NetworkGeometry, userGeomForCalc);
 

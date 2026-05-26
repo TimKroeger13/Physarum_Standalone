@@ -124,8 +124,7 @@ async function calculate(){
     // that demand point is promoted to forced (keeps its value).
     // Otherwise a zero-demand forced placeholder is inserted.
     if (ForcedGeometry) {
-        const FORCED_WEIGHT  = 1e9;   // dominates all real demand weights
-        const OVERLAP_KM     = 0.001; // 1 metre — must be essentially the same point
+        const OVERLAP_KM = 0.001; // 1 metre — must be essentially the same point
         for (const ff of ForcedGeometry.features) {
             if (ff.geometry.type !== 'Point') continue;
 
@@ -144,13 +143,13 @@ async function calculate(){
 
             if (nearestIdx >= 0) {
                 // Promote that single demand point to forced
-                userGeomForCalc.features[nearestIdx].properties.forcedWeight = FORCED_WEIGHT;
+                userGeomForCalc.features[nearestIdx].properties.forced = true;
             } else {
                 // Standalone forced point — no real demand value
                 userGeomForCalc.features.push({
                     type: 'Feature',
                     geometry: ff.geometry,
-                    properties: { value: 0, forcedWeight: FORCED_WEIGHT }
+                    properties: { value: 0, forced: true }
                 });
             }
         }

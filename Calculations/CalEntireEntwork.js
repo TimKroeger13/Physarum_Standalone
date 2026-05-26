@@ -211,11 +211,11 @@ async function calculateTheEntireNetwork(CompleteNetwork, SourceGeometry, UserGe
 
     // ── user points ────────────────────────────────────────
     let UserGeometryList = UserGeometry.features.map((f, i) => ({
-        id:          i,
-        data:        f,
-        value:       f.properties.value,
-        weightValue: f.properties.forcedWeight ?? f.properties.value,
-        nodeId:      -1
+        id:       i,
+        data:     f,
+        value:    f.properties.value,
+        isForced: !!f.properties.forced,
+        nodeId:   -1
     }));
 
     if (sourceIsPoint) UserGeometryList.pop();
@@ -229,7 +229,7 @@ async function calculateTheEntireNetwork(CompleteNetwork, SourceGeometry, UserGe
     //  which this user can ever contribute weight >= heatCutoff.
     //  Computed once here; used in the skip-guard below.
     for (const u of UserGeometryList) {
-        u.maxDist = heatCutoff > 0 ? u.weightValue / heatCutoff : Infinity;
+        u.maxDist = heatCutoff > 0 ? u.value / heatCutoff : Infinity;
     }
 
     // ── source seeds ───────────────────────────────────────
@@ -373,6 +373,11 @@ async function calculateTheEntireNetwork(CompleteNetwork, SourceGeometry, UserGe
     while (UserGeometryList.length > 0) {
         calculationCounter++;
 
+        // Two-phase: while any forced user remains, only forced users vote.
+        // Once all forced users are connected, all remaining users participate.
+        const forcedRemaining = UserGeometryList.filter(u => u.isForced);
+        const activeList = forcedRemaining.length > 0 ? forcedRemaining : UserGeometryList;
+
         // ── PHASE 1: accumulate segment weights ────────────
         //
         //  ALGORITHM UNCHANGED FROM ORIGINAL:
@@ -402,7 +407,7 @@ async function calculateTheEntireNetwork(CompleteNetwork, SourceGeometry, UserGe
         let includedCount = 0;
         let skippedCount  = 0;
 
-        for (const user of UserGeometryList) {
+        for (const user of activeList) {
             if (user.nodeId < 0) continue;
 
             // ── FIX 4: skip-guard ───────────────────────────
@@ -419,7 +424,7 @@ async function calculateTheEntireNetwork(CompleteNetwork, SourceGeometry, UserGe
             // ── end skip-guard ──────────────────────────────
 
             includedCount++;
-            const fixValue = user.weightValue;
+            const fixValue = user.value;
 
             // Reset distance buffer — same typed array every time
             distU.fill(Infinity);
@@ -505,7 +510,7 @@ async function calculateTheEntireNetwork(CompleteNetwork, SourceGeometry, UserGe
             extendFrontier(bestSegId);
 
             const { from, to } = segNodes[bestSegId];
-            for (const user of UserGeometryList) {
+            for (const user of activeList) {
                 if (user.nodeId === from || user.nodeId === to) {
                     FoundUsage = user; break;
                 }
@@ -513,7 +518,7 @@ async function calculateTheEntireNetwork(CompleteNetwork, SourceGeometry, UserGe
             if (FoundUsage) Traversing = false;
         }
 
-        if (!FoundUsage) FoundUsage = UserGeometryList[0];
+        if (!FoundUsage) FoundUsage = activeList[0];
 
         // ── PATH CLEANUP: remove detour branches ──────────
         //

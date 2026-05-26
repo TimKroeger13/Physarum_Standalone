@@ -188,37 +188,15 @@ function _buildCharts() {
         .append('rect').attr('width', oInW).attr('height', oInH);
     const oClip = _oG.append('g').attr('clip-path', 'url(#clip-ov)');
 
-    // Faint background of the full segment series (context)
+    // Segment-level series (full resolution, main view)
     oClip.append('path')
         .datum(_profit)
-        .attr('fill', 'rgba(114,255,0,0.05)')
-        .attr('stroke', 'rgba(114,255,0,0.18)')
-        .attr('stroke-width', 0.8)
+        .attr('fill', 'rgba(114,255,0,0.10)')
+        .attr('stroke', 'rgba(114,255,0,0.65)')
+        .attr('stroke-width', 1.5)
         .attr('d', d3.area()
             .x((_, i) => xO(i)).y0(oInH).y1(d => yO(d))
             .curve(d3.curveCatmullRom.alpha(0.5)));
-
-    // Connection-only step chart (prominent)
-    oClip.append('path')
-        .datum(_connProfit)
-        .attr('fill', 'none')
-        .attr('stroke', '#72FF00')
-        .attr('stroke-width', 2)
-        .attr('d', d3.line()
-            .x((_, i) => xO(_connIndices[i]))
-            .y(d => yO(d))
-            .curve(d3.curveStepAfter));
-
-    // Small dots at each connection
-    const dotR = Math.max(1.5, Math.min(3.5, 400 / (_connProfit.length || 1)));
-    oClip.selectAll('circle.ov-dot')
-        .data(_connProfit)
-        .join('circle').attr('class', 'ov-dot')
-        .attr('cx', (_, i) => xO(_connIndices[i]))
-        .attr('cy', d => yO(d))
-        .attr('r', dotR)
-        .attr('fill', '#72FF00')
-        .attr('opacity', 0.55);
 
     // Top-3 markers (gold = highest value / silver = greatest incline / bronze = 2nd incline)
     const peakColors  = ['#FFD700', '#C0C0C0', '#CD7F32'];
@@ -248,7 +226,7 @@ function _buildCharts() {
         .attr('x', oInW).attr('y', -2).attr('text-anchor', 'end')
         .attr('font-size', '8px').attr('fill', '#6e7681')
         .attr('font-family', "'IBM Plex Mono', monospace")
-        .text('OVERVIEW — cumulative kWh/m  ·  connection events');
+        .text('OVERVIEW — cumulative kWh/m  ·  all segments');
 
     // ── ZOOM SVG ─────────────────────────────────────────────
     const zInW = zW - zP.l - zP.r;
@@ -293,9 +271,10 @@ function _updateDetailCharts(sliderVal) {
     const curConnIdx = _currentConnIdx(sliderVal);
     const segIdx     = curConnIdx >= 0 ? _connIndices[curConnIdx] : 0;
 
-    // ── Overview cursor ───────────────────────────────────────
+    // ── Overview cursor — follows every segment, not just connections ──
+    const cursorSegIdx = Math.max(0, sliderVal - 1);
     _oG.select('.ov-cursor')
-        .attr('x1', _overviewX(segIdx)).attr('x2', _overviewX(segIdx))
+        .attr('x1', _overviewX(cursorSegIdx)).attr('x2', _overviewX(cursorSegIdx))
         .attr('opacity', 1);
 
     const half   = ZOOM_CONN_HALF;

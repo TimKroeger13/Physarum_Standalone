@@ -99,27 +99,20 @@ async function AddGeoJsonToMapUserValues(LayerList, geoJson){
 
 async function AddGeoJsonToMapUserValuesEndUser(LayerList, geoJson, UsageMin, UsageMax){
 
-    const exponent = 0.4;
-
     const scaleSize = d3.scaleLinear()
         .domain([UsageMin, UsageMax])
         .range([4, 10]);
 
-    const scaleColor = d3.scalePow()
-        .exponent(exponent)
-        .domain([UsageMin, UsageMax])
-        .range(['#ffffff', '#a10000']);
-
     var geoJsonLayer = L.geoJSON(geoJson, {
         pointToLayer: function (feature, latlng) {
             return L.circleMarker(latlng, {
-                renderer: _pointsRenderer,
+                renderer:    _pointsRenderer,
                 radius:      scaleSize(feature.properties.value),
-                fillColor:   scaleColor(feature.properties.value),
-                color:       '#000000',
+                fillColor:   '#ac5a18',
+                color:       '#0a0e14',
                 weight:      1,
                 opacity:     1,
-                fillOpacity: 1      // fully opaque once connected
+                fillOpacity: 1
             });
         }
     }).addTo(map);
@@ -149,20 +142,7 @@ async function AddGeoJsonToMapSourceValue(LayerList, geoJson){
     LayerList.push(geoJsonLayer);
 }
 
-// Two-layer pipeline glow: soft green halo + bright green core
 async function AddGeoJsonToMap_Pipeline(glowList, coreList, geoJson) {
-    const glow = L.geoJSON(geoJson, {
-        renderer: _canvasRenderer,
-        style: {
-            color:    '#FF6A00',
-            weight:   8,
-            opacity:  0.15,
-            lineCap:  'round',
-            lineJoin: 'round'
-        }
-    }).addTo(map);
-    glowList.push(glow);
-
     const core = L.geoJSON(geoJson, {
         renderer: _canvasRenderer,
         style: {

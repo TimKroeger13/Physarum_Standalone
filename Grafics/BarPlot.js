@@ -12,7 +12,7 @@
 //  Fix 4: Zoom Y-axis also fixed to global max (no jumping)
 // ============================================================
 
-const WIN_LOSS_CUTOFF = 1000;
+const CONNECTION_THRESHOLD = 2000;
 const ZOOM_CONN_HALF  = 50;    // connections shown each side in zoom
 const TOP_N           = 3;
 
@@ -21,6 +21,7 @@ let _profit       = [];   // full PathTotalProfit[] (all segments, for overview 
 let _connIndices  = [];   // 0-based segment index for each connection event
 let _connProfit   = [];   // PathTotalProfit at each connection
 let _connMarginal = [];   // kWh/m per connection (dValue / dNewLength)
+let _connDemand   = [];   // raw demand value added at each connection
 let _top3ConnIdx  = [];   // indices into _conn* arrays: top-3 local maxima
 let _globalWLMax  = 1;    // fixed symmetric range for W/L scale
 let _globalProfMax = 1;   // fixed y-max for zoom chart
@@ -46,6 +47,7 @@ async function displayBarPlot(numbers) {
     _connIndices  = [];
     _connProfit   = [];
     _connMarginal = [];
+    _connDemand   = [];
 
     let prevPathLength = 0;
 
@@ -60,17 +62,14 @@ async function displayBarPlot(numbers) {
         _connIndices.push(segIdx);
         _connProfit.push(_profit[segIdx] || 0);
         _connMarginal.push(marginal);
+        _connDemand.push(dValue / 1000);
         prevPathLength = pathLen;
     }
 
     // Fixed scales: compute ONCE from all connection data
     _globalProfMax = (d3.max(_connProfit) || 1) * 1.12;
 
-    const maxDev = Math.max(
-        d3.max(_connMarginal.map(v => Math.abs(v - WIN_LOSS_CUTOFF))) || 0,
-        500   // at least ±500 visible around the cutoff
-    );
-    _globalWLMax = maxDev * 1.15;
+    _globalWLMax = (d3.max(_connDemand) || 1) * 1.1;
 
     // Find top-3 LOCAL MAXIMA with minimum separation
     _top3ConnIdx = _findLocalMaxima(_connProfit, _connMarginal);
@@ -258,7 +257,7 @@ function _buildCharts() {
         .attr('x', wInW / 2).attr('y', wInH + 17).attr('text-anchor', 'middle')
         .attr('font-size', '8px').attr('fill', '#6e7681')
         .attr('font-family', "'IBM Plex Mono', monospace")
-        .text('WIN / LOSS per connection  (ref = 1000 kWh/m)');
+        .text('DEMAND PER CONNECTION  MWh');
 
     _built = true;
     _updateDetailCharts(1);
@@ -277,9 +276,14 @@ function _updateDetailCharts(sliderVal) {
         .attr('x1', _overviewX(cursorSegIdx)).attr('x2', _overviewX(cursorSegIdx))
         .attr('opacity', 1);
 
-    const half   = ZOOM_CONN_HALF;
-    const wStart = Math.max(0, curConnIdx - half);
-    const wEnd   = Math.min(_connProfit.length, wStart + half * 2);
+    const half    = ZOOM_CONN_HALF;
+    const winSize = half * 2;
+    let wStart = Math.max(0, curConnIdx - half);
+    let wEnd   = wStart + winSize;
+    if (wEnd > _connProfit.length) {
+        wEnd   = _connProfit.length;
+        wStart = Math.max(0, wEnd - winSize);
+    }
 
     // ── ZOOM chart ────────────────────────────────────────────
     const { inW: zW, inH: zH } = _zDims;
@@ -369,79 +373,49 @@ function _updateDetailCharts(sliderVal) {
             .attr('fill', '#6e7681').attr('font-size', '8px')
             .attr('font-family', "'IBM Plex Mono', monospace"));
 
-    // ── WIN/LOSS chart ────────────────────────────────────────
+    // ── PER-CONNECTION chart ──────────────────────────────────
     const { inW: wW, inH: wH } = _wDims;
 
-    // margSlice declared first so we can base yW on the visible window
-    const margSlice = _connMarginal.slice(wStart, wEnd);
+    const margSlice = _connDemand.slice(wStart, wEnd);
 
-    // Win/Loss y-scale: adapts to visible window but never less than ±1000
-    // around the cutoff — stops shaking on small windows while still
-    // expanding when a big outlier would otherwise dwarf the small bars.
-    const wlDev  = d3.max(margSlice.map(v => Math.abs(v - WIN_LOSS_CUTOFF))) || 0;
-    const wlHalf = Math.max(wlDev * 1.15, 1000);
-    const yW    = d3.scaleLinear()
-        .domain([WIN_LOSS_CUTOFF - wlHalf, WIN_LOSS_CUTOFF + wlHalf])
-        .range([wH, 0]);
-    const zeroY = yW(WIN_LOSS_CUTOFF);   // pixel y of the reference line
+    // Fixed y-scale 0→global max — never shifts while scrolling
+    const yW = d3.scaleLinear().domain([0, _globalWLMax]).range([wH, 0]);
 
-    const pitch     = wW / Math.max(margSlice.length, 1);
-    const bW        = Math.max(1, pitch - 1);
+    const pitch = wW / Math.max(margSlice.length, 1);
+    const bW    = Math.max(1, pitch - 1);
 
     const wlContent = _wG.select('.wl-content');
     wlContent.html('');
 
     margSlice.forEach((v, i) => {
-        const isWin  = v >= WIN_LOSS_CUTOFF;
-        const top    = Math.min(yW(v), zeroY);      // top of bar in pixels
-        const height = Math.max(1, Math.abs(yW(v) - zeroY));
-
         wlContent.append('rect')
             .attr('x',      i * pitch)
-            .attr('y',      top)
+            .attr('y',      yW(v))
             .attr('width',  bW)
-            .attr('height', height)
-            .attr('fill',   isWin ? 'rgba(114,255,0,0.75)' : 'rgba(255,80,80,0.75)');
+            .attr('height', Math.max(1, wH - yW(v)))
+            .attr('fill',   v >= 200 ? 'rgba(114,255,0,0.75)' : 'rgba(255,80,80,0.75)');
     });
 
     // Highlight current column
     const wlCurr = curConnIdx - wStart;
     if (wlCurr >= 0 && wlCurr < margSlice.length) {
-        // Background highlight
         wlContent.append('rect')
             .attr('x', wlCurr * pitch - 1).attr('y', 0)
             .attr('width', bW + 2).attr('height', wH)
             .attr('fill', 'rgba(255,106,0,0.14)').attr('pointer-events', 'none');
 
-        // Value label: above bar for wins, below reference for losses
-        const mv  = margSlice[wlCurr];
-        const bTop = Math.min(yW(mv), zeroY);
-        const labelY = mv >= WIN_LOSS_CUTOFF
-            ? Math.max(bTop - 5, 10)
-            : Math.min(zeroY + 13, wH - 3);
+        const mv     = margSlice[wlCurr];
+        const labelY = Math.max(yW(mv) - 5, 10);
         wlContent.append('text')
             .attr('x', Math.min(wlCurr * pitch + bW / 2, wW - 4))
             .attr('y', labelY).attr('text-anchor', 'middle')
             .attr('font-size', '8.5px').attr('font-weight', '600')
-            .attr('fill', mv >= WIN_LOSS_CUTOFF ? '#72FF00' : '#ff5050')
+            .attr('fill', mv >= 200 ? '#72FF00' : '#ff5050')
             .attr('font-family', "'IBM Plex Mono', monospace")
             .text(_fmt(mv));
     }
 
-    // Fixed reference line at cutoff (never moves — it's always at zeroY)
-    const refG = _wG.select('.wl-refline');
-    refG.html('');
-    refG.append('line')
-        .attr('x1', 0).attr('x2', wW)
-        .attr('y1', zeroY).attr('y2', zeroY)
-        .attr('stroke', 'rgba(255,106,0,0.9)')
-        .attr('stroke-width', 1.5)
-        .attr('stroke-dasharray', '6,3');
-    refG.append('text')
-        .attr('x', 3).attr('y', zeroY - 4)
-        .attr('font-size', '8px').attr('fill', 'rgba(255,106,0,0.9)')
-        .attr('font-family', "'IBM Plex Mono', monospace")
-        .text('1000 kWh/m');
+    _wG.select('.wl-refline').html('');
 
     // Y-axis (fixed scale)
     _wG.select('.wl-yaxis')

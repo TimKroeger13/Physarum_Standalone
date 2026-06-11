@@ -20,13 +20,17 @@ async function getNearestPointsOfFeatureCollectionAndLine(SourceGeometry, Networ
     
     // Find nearest points on network for all user points (and source point if it's a point)
     for (let i = 0; i < OrginalUserPoints.features.length; i++){
-    
+
+        if (!OrginalUserPoints.features[i].geometry) continue;  // skip null-geometry points
+
         let PointDistances = [];
-    
+
         for (let k = 0; k < NetworkGeometry.features.length; k++){
-    
+            const geomType = NetworkGeometry.features[k].geometry?.type;
+            if (geomType !== 'LineString' && geomType !== 'MultiLineString') continue;
+
             let currentPoint = turf.nearestPointOnLine(NetworkGeometry.features[k], OrginalUserPoints.features[i]);
-    
+
             PointDistances.push(currentPoint.properties.dist);
         }
     

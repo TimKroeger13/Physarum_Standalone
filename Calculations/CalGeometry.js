@@ -58,6 +58,7 @@ async function modeldata(){
     TotalEndOutputDisplay = modelJson[0].TotalEndOutputDisplay;
     TotalEndUsageDisplay = modelJson[0].TotalEndUsageDisplay;
     UserGeometry = modelJson[0].UserGeometry;
+    ForcedGeometry = modelJson[0].ForcedGeometry || null;
     EntireUsage = modelJson[0].EntireUsage;
     ConnectionLines = modelJson[0].ConnectionLines || null;
 
@@ -83,6 +84,7 @@ async function modeldata(){
     await AddGeoJsonFeatureToMap_Source(SourceGeometry);
     await AddGeoJsonFeatureToMap_Network(NetworkGeometry);
     await AddGeoJsonFeatureToMap_User(UserGeometry);
+    if (ForcedGeometry) await AddGeoJsonFeatureToMap_Forced(ForcedGeometry);
 
     // Reconstruct connection lines from geometry if not in model (old .phy files)
     if (!ConnectionLines && UserGeometry && NetworkGeometry) {
@@ -314,6 +316,7 @@ async function Export() {
         SourceGeometry: SourceGeometry,
         NetworkGeometry: NetworkGeometry,
         UserGeometry: UserGeometry,
+        ForcedGeometry: ForcedGeometry || null,
         TotalEndOutputDisplay: TotalEndOutputDisplay,
         TotalEndUsageDisplay: TotalEndUsageDisplay,
         EntireUsageOccurence: EntireUsageOccurence,

@@ -160,15 +160,15 @@
       const handle = document.getElementById('resizeHandle');
       let dragging = false;
 
-      handle.addEventListener('mousedown', function (e) {
+      handle.addEventListener('mousedown', function (event) {
         dragging = true;
         handle.classList.add('dragging');
         document.body.style.cursor      = 'ns-resize';
         document.body.style.userSelect  = 'none';
-        e.preventDefault();
+        event.preventDefault();
       });
 
-      document.addEventListener('mousemove', function (e) {
+      document.addEventListener('mousemove', function (event) {
         if (!dragging) return;
 
         const titleH   = document.querySelector('.Titel').offsetHeight;
@@ -179,7 +179,7 @@
         // Clamp mouse so charts never vanish and map never disappears
         const minY = titleH + sliderH + resultsH + 40;   // 40px min chart
         const maxY = window.innerHeight - handleH - 80;  // 80px min map
-        const y    = Math.max(minY, Math.min(maxY, e.clientY));
+        const y    = Math.max(minY, Math.min(maxY, event.clientY));
 
         const newBarPlotH = y - titleH - sliderH - resultsH;
         const newMapH     = window.innerHeight - y - handleH;

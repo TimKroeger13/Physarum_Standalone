@@ -665,7 +665,8 @@ async function calculateTheEntireNetwork(CompleteNetwork, SourceGeometry, UserGe
             id:        FoundUsage.id,
             length:    FoundUsage.length || 0,
             value:     FoundUsage.value,
-            occurence: RunningOrder
+            occurence: RunningOrder,
+            forced:    !!FoundUsage.isForced
         });
 
         if (CompletePath.length > 0) {

@@ -26,8 +26,8 @@ async function importFileContent(fileInput) {
             const file = event.target.files[0];
             if (file) {
                 const reader = new FileReader();
-                reader.onload = function(e) {
-                    const fileContent = e.target.result;
+                reader.onload = function(event) {
+                    const fileContent = event.target.result;
                     resolve(fileContent);
                 };
                 reader.onerror = function(error) {

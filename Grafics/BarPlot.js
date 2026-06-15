@@ -22,6 +22,8 @@ let _connIndices  = [];   // 0-based segment index for each connection event
 let _connProfit   = [];   // PathTotalProfit at each connection
 let _connMarginal = [];   // kWh/m per connection (dValue / dNewLength)
 let _connDemand   = [];   // raw demand value added at each connection
+let _connForced   = [];   // true if connection was a forced point
+let _lastForcedConnIdx = -1;  // index of last forced connection
 let _top3ConnIdx  = [];   // indices into _conn* arrays: top-3 local maxima
 let _globalWLMax  = 1;    // fixed symmetric range for W/L scale
 let _globalProfMax = 1;   // fixed y-max for zoom chart
@@ -48,6 +50,7 @@ async function displayBarPlot(numbers) {
     _connProfit   = [];
     _connMarginal = [];
     _connDemand   = [];
+    _connForced   = [];
 
     let prevPathLength = 0;
 
@@ -63,6 +66,7 @@ async function displayBarPlot(numbers) {
         _connProfit.push(_profit[segIdx] || 0);
         _connMarginal.push(marginal);
         _connDemand.push(dValue / 1000);
+        _connForced.push(!!usage[i].forced);
         prevPathLength = pathLen;
     }
 
@@ -73,6 +77,8 @@ async function displayBarPlot(numbers) {
 
     // Find top-3 LOCAL MAXIMA with minimum separation
     _top3ConnIdx = _findLocalMaxima(_connProfit, _connMarginal);
+
+    _lastForcedConnIdx = _connForced.lastIndexOf(true);
 
     _scheduleBuild(0);
 }
@@ -187,15 +193,38 @@ function _buildCharts() {
         .append('rect').attr('width', oInW).attr('height', oInH);
     const oClip = _oG.append('g').attr('clip-path', 'url(#clip-ov)');
 
-    // Segment-level series (full resolution, main view)
+    // Segment-level series — purple for forced portion, green for free
+    const _lastForcedSeg = _lastForcedConnIdx >= 0 ? _connIndices[_lastForcedConnIdx] : -1;
+
+    if (_lastForcedSeg >= 0) {
+        oClip.append('path')
+            .datum(_profit.slice(0, _lastForcedSeg + 1))
+            .attr('fill', 'rgba(192,96,255,0.08)')
+            .attr('stroke', 'rgba(192,96,255,0.70)')
+            .attr('stroke-width', 1.5)
+            .attr('d', d3.area()
+                .x((_, i) => xO(i)).y0(oInH).y1(d => yO(d))
+                .curve(d3.curveCatmullRom.alpha(0.5)));
+    }
+
+    const _freeSeg = Math.max(0, _lastForcedSeg);
     oClip.append('path')
-        .datum(_profit)
+        .datum(_profit.slice(_freeSeg))
         .attr('fill', 'rgba(114,255,0,0.10)')
         .attr('stroke', 'rgba(114,255,0,0.65)')
         .attr('stroke-width', 1.5)
         .attr('d', d3.area()
-            .x((_, i) => xO(i)).y0(oInH).y1(d => yO(d))
+            .x((_, i) => xO(_freeSeg + i)).y0(oInH).y1(d => yO(d))
             .curve(d3.curveCatmullRom.alpha(0.5)));
+
+    if (_lastForcedSeg >= 0 && _lastForcedSeg < _profit.length - 1) {
+        _oG.append('line')
+            .attr('x1', xO(_lastForcedSeg)).attr('x2', xO(_lastForcedSeg))
+            .attr('y1', 0).attr('y2', oInH)
+            .attr('stroke', 'rgba(192,96,255,0.55)')
+            .attr('stroke-width', 1)
+            .attr('stroke-dasharray', '4,3');
+    }
 
     // Top-3 markers (gold = highest value / silver = greatest incline / bronze = 2nd incline)
     const peakColors  = ['#FFD700', '#C0C0C0', '#CD7F32'];
@@ -299,26 +328,58 @@ function _updateDetailCharts(sliderVal) {
     const zContent = _zG.select('.z-content');
     zContent.html('');
 
+    // Compute forced/free split within visible window
+    let splitAt = 0;
+    for (let i = 0; i < connSlice.length; i++) {
+        if (_connForced[wStart + i]) splitAt = i + 1;
+    }
+
     if (connSlice.length > 1) {
+        // Fill area (green throughout for readability)
         zContent.append('path')
             .datum(connSlice)
             .attr('fill', 'rgba(114,255,0,0.10)')
             .attr('d', d3.area()
                 .x((_, i) => xZ(wStart + i)).y0(zH).y1(d => yZ(d))
                 .curve(d3.curveMonotoneX));
-        zContent.append('path')
-            .datum(connSlice)
-            .attr('fill', 'none').attr('stroke', '#72FF00').attr('stroke-width', 2)
-            .attr('d', d3.line()
-                .x((_, i) => xZ(wStart + i)).y(d => yZ(d))
-                .curve(d3.curveMonotoneX));
+
+        // Purple line for forced portion
+        if (splitAt > 1) {
+            zContent.append('path')
+                .datum(connSlice.slice(0, splitAt))
+                .attr('fill', 'none').attr('stroke', '#c060ff').attr('stroke-width', 2)
+                .attr('d', d3.line()
+                    .x((_, i) => xZ(wStart + i)).y(d => yZ(d))
+                    .curve(d3.curveMonotoneX));
+        }
+
+        // Green line for free portion (starts one point back to join cleanly)
+        const freeStart = Math.max(0, splitAt - 1);
+        if (freeStart < connSlice.length - 1) {
+            zContent.append('path')
+                .datum(connSlice.slice(freeStart))
+                .attr('fill', 'none').attr('stroke', '#72FF00').attr('stroke-width', 2)
+                .attr('d', d3.line()
+                    .x((_, i) => xZ(wStart + freeStart + i)).y(d => yZ(d))
+                    .curve(d3.curveMonotoneX));
+        }
+
+        // Divider at forced/free boundary
+        if (splitAt > 0 && splitAt < connSlice.length) {
+            zContent.append('line')
+                .attr('x1', xZ(wStart + splitAt - 0.5)).attr('x2', xZ(wStart + splitAt - 0.5))
+                .attr('y1', 0).attr('y2', zH)
+                .attr('stroke', 'rgba(192,96,255,0.5)').attr('stroke-width', 1)
+                .attr('stroke-dasharray', '4,3');
+        }
     }
 
-    // Dots
+    // Dots — purple for forced, green for free
     connSlice.forEach((v, i) => {
+        const isF = _connForced[wStart + i];
         zContent.append('circle')
             .attr('cx', xZ(wStart + i)).attr('cy', yZ(v)).attr('r', 3)
-            .attr('fill', '#72FF00').attr('opacity', 0.65);
+            .attr('fill', isF ? '#c060ff' : '#72FF00').attr('opacity', 0.65);
     });
 
     // Top-3 visible in zoom window
@@ -388,12 +449,16 @@ function _updateDetailCharts(sliderVal) {
     wlContent.html('');
 
     margSlice.forEach((v, i) => {
+        const isF = _connForced[wStart + i];
+        const fill = isF
+            ? 'rgba(192,96,255,0.75)'
+            : v >= 200 ? 'rgba(114,255,0,0.75)' : 'rgba(255,80,80,0.75)';
         wlContent.append('rect')
             .attr('x',      i * pitch)
             .attr('y',      yW(v))
             .attr('width',  bW)
             .attr('height', Math.max(1, wH - yW(v)))
-            .attr('fill',   v >= 200 ? 'rgba(114,255,0,0.75)' : 'rgba(255,80,80,0.75)');
+            .attr('fill',   fill);
     });
 
     // Highlight current column
@@ -410,7 +475,7 @@ function _updateDetailCharts(sliderVal) {
             .attr('x', Math.min(wlCurr * pitch + bW / 2, wW - 4))
             .attr('y', labelY).attr('text-anchor', 'middle')
             .attr('font-size', '8.5px').attr('font-weight', '600')
-            .attr('fill', mv >= 200 ? '#72FF00' : '#ff5050')
+            .attr('fill', _connForced[wStart + wlCurr] ? '#c060ff' : mv >= 200 ? '#72FF00' : '#ff5050')
             .attr('font-family', "'IBM Plex Mono', monospace")
             .text(_fmt(mv));
     }

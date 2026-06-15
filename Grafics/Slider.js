@@ -40,13 +40,13 @@ function nextConnection() {
 }
 
 // Keyboard support: arrow keys when slider is focused
-document.addEventListener('keydown', function(e) {
+document.addEventListener('keydown', function(event) {
     const focused = document.activeElement;
     const isSlider = focused && focused.id === 'slider';
     // Only hijack if slider is focused or no input is focused
     const anyInput = ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName);
     if (anyInput && !isSlider) return;
 
-    if (e.key === 'ArrowLeft'  || e.key === 'ArrowDown')  { e.preventDefault(); prevConnection(); }
-    if (e.key === 'ArrowRight' || e.key === 'ArrowUp')    { e.preventDefault(); nextConnection(); }
+    if (event.key === 'ArrowLeft'  || event.key === 'ArrowDown')  { event.preventDefault(); prevConnection(); }
+    if (event.key === 'ArrowRight' || event.key === 'ArrowUp')    { event.preventDefault(); nextConnection(); }
 });

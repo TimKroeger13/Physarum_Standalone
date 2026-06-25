@@ -224,6 +224,13 @@ async function calculateTheEntireNetwork(CompleteNetwork, SourceGeometry, UserGe
         u.nodeId = featureToNodeId(u.data, nodeIndex);
     }
 
+    // Drop users whose snap coordinate doesn't match any network node.
+    // nodeId === -1 means featureToNodeId found no match (floating-point
+    // mismatch in the snap/fragment pipeline). These users can never be
+    // reached in Phase 2, causing the traversal to consume every remaining
+    // segment before the fallback assigns them — runaway network expansion.
+    UserGeometryList = UserGeometryList.filter(u => u.nodeId >= 0);
+
     // ── FIX 4: pre-compute maxDist per user ────────────────
     //  maxDist = value / heatCutoff = the furthest distance at
     //  which this user can ever contribute weight >= heatCutoff.
@@ -464,11 +471,23 @@ async function calculateTheEntireNetwork(CompleteNetwork, SourceGeometry, UserGe
         }
 
         // ── PHASE 2: greedy path expansion ─────────────────
-        //  Unchanged from original.
         const CompletePath = [];
         let   FoundUsage   = null;
 
-        let Traversing = true;
+        // Pre-check: if any active user's snap node is already on the frontier
+        // (reachable through segments built in prior iterations), claim them
+        // immediately — no new segments need to be built to connect them.
+        // Without this check, Phase 2 exhausts ALL remaining available segments
+        // before the fallback assigns the user, and path cleanup then fails to
+        // prune because the user's node is absent from the mini-graph (no new
+        // segment was ever added that touches it), dumping every segment into
+        // EntireNetwork. This occurs when the network is edited to pass through
+        // a user point, or when two users share the same snap node.
+        FoundUsage = activeList.find(
+            u => u.nodeId >= 0 && frontierDist[u.nodeId] < Infinity
+        ) || null;
+
+        let Traversing = FoundUsage === null;
         while (Traversing) {
             let bestSegId  = -1;
             let bestWeight = -Infinity;
@@ -584,6 +603,49 @@ async function calculateTheEntireNetwork(CompleteNetwork, SourceGeometry, UserGe
                         heapFrontier.push(nd, other);
                     }
                 }
+            }
+
+            if (anchorReached < 0) {
+                // Path cleanup found no route from user node to the built network.
+                // The user's snap node is in a disconnected network component —
+                // it cannot be connected. Restore all Phase-2 segments so future
+                // iterations can still use them, reset frontierDist to remove
+                // phantom distances, and drop this user from the list.
+                for (const step of CompletePath) {
+                    builtSegIds.delete(step.id);
+                    availableSegs.add(step.id);
+                    RunningLength -= step.length;
+                    RunningOrder--;
+                }
+                frontierDist.fill(Infinity);
+                heapFrontier.clear();
+                for (const { nodeId, distSoFar } of sourceNodeSeeds) {
+                    if (nodeId >= 0) {
+                        frontierDist[nodeId] = distSoFar;
+                        heapFrontier.push(distSoFar, nodeId);
+                    }
+                }
+                while (heapFrontier.size) {
+                    const { priority: d, node: u } = heapFrontier.pop();
+                    if (d > frontierDist[u]) continue;
+                    for (const edge of adj[u]) {
+                        if (!builtSegIds.has(edge.segId)) continue;
+                        const nd = d + edge.length;
+                        if (nd < frontierDist[edge.to]) {
+                            frontierDist[edge.to] = nd;
+                            heapFrontier.push(nd, edge.to);
+                        }
+                    }
+                }
+                frontierCoords.length = 0;
+                for (let ni = 0; ni < numNodes; ni++)
+                    if (frontierDist[ni] < Infinity) frontierCoords.push(nodes[ni]);
+
+                const removeIdx = UserGeometryList.indexOf(FoundUsage);
+                const lastIdx   = UserGeometryList.length - 1;
+                if (removeIdx !== lastIdx) UserGeometryList[removeIdx] = UserGeometryList[lastIdx];
+                UserGeometryList.pop();
+                continue; // skip Phase 3, no segments built
             }
 
             if (anchorReached >= 0) {

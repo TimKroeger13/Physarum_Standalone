@@ -4,7 +4,7 @@
 
 **Physarum Netzplaner** is a browser-based network optimization tool that helps plan the expansion of utility distribution networks (e.g. district heating) using an algorithm inspired by the slime mold *Physarum polycephalum*. It takes three GeoJSON inputs — a supply source, an existing network, and user locations with demand values — and computes an optimal, demand-weighted network expansion connecting all users to the source.
 
-**Version:** 0.04 (Prototype)  
+**Version:** 0.05 (Prototype)  
 **Target use case:** Urban infrastructure planning (district heating, utility rollout)  
 **Stack:** Vanilla JavaScript, Leaflet.js (mapping), D3.js (charts), Turf.js (geometry), OpenStreetMap Nominatim (geocoding)  
 **No build system** — runs directly as static HTML/JS in the browser.
